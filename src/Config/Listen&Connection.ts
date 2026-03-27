@@ -9,3 +9,4 @@ mongoose.connection.once("open", () => {
   console.log("Connected to Data Base MongoDB");
   app.listen(Port, () => console.log("Server now listen on Port : " + Port));
 });
+mongoose.connection.on("error", (e) => console.log("Error : ", e));
