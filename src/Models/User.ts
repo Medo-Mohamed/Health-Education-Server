@@ -42,6 +42,7 @@ export interface IUser extends Document {
   friends: Types.ObjectId[];
   bio?: string;
   location: ILocation;
+  forgetPasswordInfo: { otpCode: string, validTime: Date | null };
   social_links: ISocialLink[];
   preferences: IPreferences;
   stats: IStats;
@@ -121,7 +122,16 @@ const userSchema = new Schema<IUser>(
       city: { type: String, default: "" },
       timezone: { type: String, default: "UTC+2" },
     },
-
+    forgetPasswordInfo: {
+      otpCode: {
+        type: String,
+        // لا نضع default هنا لأننا نريده فقط عند الطلب
+      },
+      validTime: {
+        type: Date,
+        // لا نضع default هنا أيضاً لتجنب خطأ توقيت السيرفر
+      },
+    },
     social_links: [
       {
         platform: {
