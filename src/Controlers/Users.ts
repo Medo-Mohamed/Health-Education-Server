@@ -252,12 +252,14 @@ export const changePassword = async (
 };
 
 export const refreshauth = async (req: Request, res: Response) => {
+  // console.log("refresh auth", req.user);
+  const { _id } = req.user as IUser;
   try {
     // console.log("refresh auth");
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "يرجى تسجيل الدخول أولاً" });
     }
-    const user = await User.findById(req.user?._id);
+    const user = await User.findById(_id);
     if (!user) {
       return res.status(404).json({ message: "المستخدم غير موجود" });
     }
