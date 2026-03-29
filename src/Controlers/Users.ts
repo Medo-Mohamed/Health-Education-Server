@@ -9,27 +9,23 @@ export const createUsers = async (request: Request, response: Response) => {
       username,
       password,
       phone_numbers,
-      full_name,
+      first_name,
+      last_name,
       email,
       location,
-      avatar_url,
-      bio,
-      social_links,
     } = request.body;
     const newUser = new User({
       username,
       password,
       phone_numbers,
-      full_name,
+      first_name,
+      last_name,
       email,
       location,
-      avatar_url,
-      bio,
-      social_links,
     });
     await newUser.save();
     // console.log(newUser);
-    response.json(newUser);
+    response.status(201).json(newUser.sendToClient());
   } catch (error: any) {
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue)[0] as string;
@@ -64,15 +60,25 @@ export const createUsers = async (request: Request, response: Response) => {
 };
 
 export const login = (req: Request, res: Response, next: NextFunction) => {
+  const { rememberMe } = req.body; // استخراج القيمة من الطلب
   passport.authenticate("local", (err: any, user: IUser, info: any) => {
-    if (err) return next(err);
-    if (!user) return res.status(400).json({ message: info.message });
+    if (err) return res.status(401).json({ message: err.message });
+    // if (!user) return res.status(400).json({ message: info.message });
 
     req.logIn(user, (err) => {
-      if (err) return next(err);
+      if (err) return res.status(500).json({ message: "حدث خطأ في السيرفر" });
+      if (rememberMe) {
+        // اجعل الكوكي يستمر لمدة 30 يوم (بالملي ثانية)
+        const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+        req.session.cookie.maxAge = thirtyDays;
+      } else {
+        // إذا لم يختر "تذكرني"، اجعله Session Cookie
+        // سيتم حذفه بمجرد إغلاق المتصفح تماماً
+        req.session.cookie.maxAge = undefined;
+      }
       return res.status(200).json({
         message: "تم تسجيل الدخول بنجاح",
-        user: { username: user.username, role: user.role },
+        user: user.sendToClient(),
       });
     });
   })(req, res, next);
@@ -242,5 +248,21 @@ export const changePassword = async (
     return res.status(400).json({ message: "تم تغيير كلمة السر بنجاح" });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
+  }
+};
+
+export const refreshauth = async (req: Request, res: Response) => {
+  try {
+    // console.log("refresh auth");
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "يرجى تسجيل الدخول أولاً" });
+    }
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+      return res.status(404).json({ message: "المستخدم غير موجود" });
+    }
+    res.status(200).json(user.sendToClient());
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };

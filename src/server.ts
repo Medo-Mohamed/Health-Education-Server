@@ -19,11 +19,14 @@ app.use(cookieParser());
 app.use(experss.json());
 app.use(
   session({
-    secret: process.env.SECRET_SESSION_KEY || "", // will come from .env
+    secret: process.env.SECRET_SESSION_KEY as string,
     saveUninitialized: false,
     resave: false,
     cookie: {
       maxAge: 1000 * 60 * 60,
+      secure: false, // لأنك على http
+      httpOnly: true,
+      sameSite: "lax", // 👈 ضروري جداً للسماح بتداول الكوكي بين منفذ 5173 و 5000
     },
     store: MongoStore.create({
       client: mongoose.connection.getClient(),
@@ -35,7 +38,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(RootRouter);
-app.use("/user", UsersRouter);
+app.use("/auth", UsersRouter);
 
 app.all("*any", (req, res) => {
   res.status(404).json({ message: "404 Resource not found" });

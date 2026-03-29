@@ -11,7 +11,7 @@ import { isNotAuthenticated } from "../../middleware/isAuth.ts";
 const router = Router();
 router.use(isNotAuthenticated);
 
-router.route("/regester").post(createUsers);
+router.route("/register").post(createUsers);
 
 router.post("/login", login);
 

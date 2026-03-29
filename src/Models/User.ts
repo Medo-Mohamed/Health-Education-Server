@@ -32,17 +32,19 @@ interface IStats {
 }
 
 export interface IUser extends Document {
+  _id: Types.ObjectId;
   username: string;
   password?: string; // جعلناه اختيارياً بسبب عملية الحذف في transform وللسماح باستخدامه بعد التشفير
   phone_numbers: string[];
-  full_name: string;
+  first_name: string;
+  last_name: string;
   email?: string;
   role: "dev" | "user";
   avatar_url: string;
   friends: Types.ObjectId[];
   bio?: string;
   location: ILocation;
-  forgetPasswordInfo: { otpCode: string, validTime: Date | null };
+  forgetPasswordInfo: { otpCode: string; validTime: Date | null };
   social_links: ISocialLink[];
   preferences: IPreferences;
   stats: IStats;
@@ -51,6 +53,22 @@ export interface IUser extends Document {
   created_at: Date; // مضافة بسبب timestamps
   updated_at: Date; // مضافة بسبب timestamps
   comparePassword(candidatePassword: string): Promise<boolean>;
+  sendToClient(): Omit<
+    IUser,
+    | "password"
+    | "__v"
+    | "created_at"
+    | "updated_at"
+    | "forgetPasswordInfo"
+    | "last_login"
+    | "friends"
+    | "social_links"
+    | "preferences"
+    | "stats"
+    | "is_verified"
+    | "location"
+    | "role"
+  >;
 }
 
 const userSchema = new Schema<IUser>(
@@ -83,9 +101,14 @@ const userSchema = new Schema<IUser>(
         message: "يجب إضافة رقم هاتف واحد على الأقل عند التسجيل.",
       },
     },
-    full_name: {
+    first_name: {
       type: String,
-      required: [true, "الاسم بالكامل مطلوب ولا يمكن تركه فارغاً"],
+      required: [true, "الاسم الاول مطلوب ولا يمكن تركه فارغاً"],
+      trim: true,
+    },
+    last_name: {
+      type: String,
+      required: [true, "الاسم الأخير مطلوب ولا يمكن تركه فارغاً"],
       trim: true,
     },
     role: {
@@ -205,6 +228,25 @@ userSchema.methods.comparePassword = async function (
   candidatePassword: string,
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.sendToClient = function () {
+  const userObject = this.toObject();
+  delete userObject.password;
+  delete userObject.__v;
+  delete userObject.created_at;
+  delete userObject.updated_at;
+  delete userObject.forgetPasswordInfo;
+  delete userObject.last_login;
+  delete userObject.friends;
+  delete userObject.social_links;
+  delete userObject.preferences;
+  delete userObject.stats;
+  delete userObject.is_verified;
+  delete userObject.location;
+  delete userObject.role;
+
+  return userObject;
 };
 
 const User = model<IUser>("User", userSchema);
