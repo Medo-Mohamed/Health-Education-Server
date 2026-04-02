@@ -12,7 +12,7 @@ interface ISocialLink {
 
 // 2. واجهة الموقع الجغرافي
 interface ILocation {
-  country: string;
+  governorate: string;
   city: string;
   timezone: string;
 }
@@ -69,6 +69,15 @@ export interface IUser extends Document {
     | "location"
     | "role"
   >;
+  sendToClientProfile(): Omit<
+    IUser,
+    | "password"
+    | "__v"
+    | "is_verified"
+    | "forgetPasswordInfo"
+    | "friends"
+    | "preferences"
+  >;
 }
 
 const userSchema = new Schema<IUser>(
@@ -78,6 +87,11 @@ const userSchema = new Schema<IUser>(
       required: [true, "اسم المستخدم مطلوب ولا يمكن تركه فارغاً"],
       unique: true,
       trim: true,
+      validate: {
+        validator: (v: string) => /^[a-zA-Z0-9_]+$/.test(v),
+        message:
+          "اسم المستخدم يجب أن يحتوي فقط على حروف، أرقام، أو underscores (بدون مسافات أو رموز خاصة)",
+      },
     },
     password: {
       type: String,
@@ -141,7 +155,7 @@ const userSchema = new Schema<IUser>(
     ],
     bio: { type: String, default: "" },
     location: {
-      country: { type: String, default: "" },
+      governorate: { type: String, default: "" },
       city: { type: String, default: "" },
       timezone: { type: String, default: "UTC+2" },
     },
@@ -228,6 +242,17 @@ userSchema.methods.comparePassword = async function (
   candidatePassword: string,
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.sendToClientProfile = function () {
+  const userObject = this.toObject();
+  delete userObject.password;
+  delete userObject.__v;
+  delete userObject.is_verified;
+  delete userObject.forgetPasswordInfo;
+  delete userObject.friends;
+  delete userObject.preferences;
+  return userObject;
 };
 
 userSchema.methods.sendToClient = function () {

@@ -3,7 +3,10 @@ import User, { type IUser } from "../Models/User.ts";
 import passport from "passport";
 import { sendBrevoEmail } from "../Config/emailService.ts";
 import jwt from "jsonwebtoken";
+import cloudinary from "../Config/cloudinary.ts";
+import fs from "fs";
 export const createUsers = async (request: Request, response: Response) => {
+  console.log("Registering user with data:", request.body); // إضافة هذا السطر لتتبع البيانات المستلمة
   try {
     const {
       username,
@@ -12,7 +15,7 @@ export const createUsers = async (request: Request, response: Response) => {
       first_name,
       last_name,
       email,
-      location,
+      location: { governorate, city, timezone },
     } = request.body;
     const newUser = new User({
       username,
@@ -21,7 +24,7 @@ export const createUsers = async (request: Request, response: Response) => {
       first_name,
       last_name,
       email,
-      location,
+      location: { governorate, city, timezone },
     });
     await newUser.save();
     // console.log(newUser);
@@ -53,7 +56,7 @@ export const createUsers = async (request: Request, response: Response) => {
           const item = str.split(":") as [string, string];
           retMsg[item[0]?.trim()] = item[1]?.trim();
         });
-      return response.status(401).json(retMsg);
+      return response.status(400).json(retMsg);
     }
     response.status(401).json(error.message);
   }
@@ -266,5 +269,139 @@ export const refreshauth = async (req: Request, res: Response) => {
     res.status(200).json(user.sendToClient());
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const profileDisplay = async (req: Request, res: Response) => {
+  const { _id } = req.user as IUser;
+  try {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "يرجى تسجيل الدخول أولاً" });
+    }
+    const user = await User.findById(_id);
+    if (!user) {
+      return res.status(404).json({ message: "المستخدم غير موجود" });
+    }
+    res.status(200).json(user.sendToClientProfile());
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateProfile = async (req: Request, res: Response) => {
+  const { _id } = req.user as IUser;
+
+  try {
+    // 1. استخراج النصوص الأساسية من الـ Body
+    const { first_name, last_name, bio, email, oldPassword, newPassword } =
+      req.body;
+    // console.log("Received update data:", req.body);
+
+    // 5. تحديث قاعدة البيانات
+    const user = await User.findById(_id);
+    if (!user) {
+      return res.status(404).json({ message: "المستخدم غير موجود" });
+    }
+
+    if (!(await user.comparePassword(oldPassword)))
+      return res.status(400).json({ oldPassword: "كلمة السر غير صحيحة" });
+    // 2. فك البيانات المعقدة بأمان (استخدام try-catch داخلي لكل JSON.parse)
+    const parseJSON = (data: any) => {
+      try {
+        return data ? JSON.parse(data) : undefined;
+      } catch (e) {
+        return undefined;
+      }
+    };
+
+    const location = parseJSON(req.body.location);
+    const phoneNumbers = parseJSON(req.body.phone_numbers);
+    const socialLinks = parseJSON(req.body.social_links);
+
+    // 3. تجميع البيانات المجهزة للتحديث في كائن واحد
+    // ملاحظة: نضع فقط البيانات التي نريد تحديثها فعلياً
+    let updateData: any = {
+      first_name,
+      last_name,
+      bio,
+      email,
+    };
+
+    if (location) updateData.location = location;
+    if (phoneNumbers) updateData.phone_numbers = phoneNumbers;
+    if (socialLinks) updateData.social_links = socialLinks;
+
+    // 4. معالجة رفع الصورة إلى Cloudinary
+    if (req.file) {
+      // console.log("جارٍ رفع الصورة: ", req.file.originalname);
+
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "health_platform/avatars",
+        gravity: "face",
+        width: 500,
+        height: 500,
+        crop: "thumb",
+        transformation: [
+          { width: 500, height: 500, crop: "fill", gravity: "face" },
+          { quality: "auto", fetch_format: "auto" },
+        ],
+      });
+
+      updateData.avatar_url = result.secure_url;
+
+      // حذف الملف المؤقت من السيرفر فوراً بعد الرفع
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+    }
+
+    // دمج البيانات الجديدة مع كائن المستخدم
+    Object.assign(user, updateData);
+
+    if (newPassword) user.password = newPassword;
+
+    // حفظ التغييرات (سيقوم بتشغيل الـ Schema Validation)
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      user: user.sendToClientProfile(), // تأكد أن هذه الدالة معرفة في الـ Model
+    });
+  } catch (error: any) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0] as string;
+      const value = error.keyValue[field];
+
+      // قاموس لترجمة أسماء الحقول للعربية
+      const fieldNames: { [key: string]: string } = {
+        username: "اسم المستخدم",
+        email: "البريد الإلكتروني",
+        phone_numbers: "رقم الهاتف",
+      };
+
+      return res.status(400).json({
+        [field]: `عذراً، ${fieldNames[field] || field} مسجل لدينا بالفعل.`,
+      });
+    }
+    const errorMsg: string = error.message;
+    // console.log(errorMsg.split(","));
+    if (
+      typeof errorMsg === "string" &&
+      errorMsg.startsWith("User validation failed:")
+    ) {
+      const retMsg: any = {};
+      errorMsg
+        .slice(errorMsg.indexOf(":") + 1)
+        .split(",")
+        .forEach((str) => {
+          const item = str.split(":") as [string, string];
+          retMsg[item[0]?.trim()] = item[1]?.trim();
+        });
+      return res.status(400).json(retMsg);
+    }
+    return res.status(500).json({
+      message: "خطأ في السيرفر أثناء التحديث",
+      error: error.message, // مفيد جداً أثناء التطوير لمعرفة سبب الـ 500
+    });
   }
 };
