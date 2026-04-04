@@ -81,7 +81,7 @@ export const login = (req: Request, res: Response, next: NextFunction) => {
       }
       return res.status(200).json({
         message: "تم تسجيل الدخول بنجاح",
-        user: user.sendToClient(),
+        user: user.sendToClientProfile(),
       });
     });
   })(req, res, next);
@@ -118,12 +118,14 @@ export const lostPassword = async (
 ) => {
   try {
     const { username } = req.body;
-    if (!username) res.status(400).json({ message: "برجاء إدخل اليوزر" });
+    if (!username)
+      return res.status(401).json({ message: "برجاء إدخل اليوزر" });
     const user = await User.findOne({ username });
     if (!user) return res.status(401).json({ message: "هذا اليوزر غير موجود" });
     if (!user.email)
       return res.status(401).json({
-        message: "لا يمكن إرجاع هذا المستخدم لعدم وجود بريد الكتروني مسجل لديه",
+        message:
+          " \n قم بالتواصل مع مدير الموقع لإرجاعة .لا يمكن إرجاع هذا المستخدم لعدم وجود بريد الكتروني مسجل لديه",
       });
     // توليد كود عشوائي
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -151,7 +153,9 @@ export const lostPassword = async (
         validTime: new Date(Date.now() + 10 * 60 * 1000),
       };
       await user.save();
-      res.status(200).json({ message: "تم إرسال الكود بنجاح" });
+      res
+        .status(200)
+        .json({ message: "تم إرسال الكود بنجاح للبريد الإلكتروني" });
     } else {
       res
         .status(500)
@@ -183,12 +187,12 @@ export const confirmOtpCode = async (
     if (Date.now() > user.forgetPasswordInfo.validTime.getTime()) {
       return res
         .status(400)
-        .json({ message: "انتهت صلاحية الكود، يرجى طلب كود جديد" });
+        .json({ message: "انتهت صلاحية الرمز، يرجى طلب كود جديد" });
     }
 
     // console.log(user.forgetPasswordInfo);
     if (user.forgetPasswordInfo.otpCode !== otpCode) {
-      return res.status(400).json({ message: "الكود غير صحيح" });
+      return res.status(400).json({ message: "الرمز غير صحيح" });
     }
     user.forgetPasswordInfo = {
       otpCode: "",
@@ -215,7 +219,7 @@ export const confirmOtpCode = async (
       .status(200)
       .json({
         message:
-          "الكود صحيح، يمكنك الآن تغيير كلمة المرور لديك 5 دقائق للتعديل",
+          "الرمز صحيح، يمكنك الآن تغيير كلمة المرور لديك 5 دقائق للتعديل",
       });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
@@ -248,7 +252,10 @@ export const changePassword = async (
       return res.status(400).json({ message: "هذا المستخدم غير موجود" });
     user.password = newPassword;
     await user.save();
-    return res.status(400).json({ message: "تم تغيير كلمة السر بنجاح" });
+
+    res.clearCookie("jwt"); // حذف توكن تسجيل الدخول القديم
+    res.clearCookie("otpToken"); // حذف توكن التحقق من الـ OTP
+    return res.status(200).json({ message: "تم تغيير كلمة السر بنجاح" });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }
@@ -266,7 +273,7 @@ export const refreshauth = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({ message: "المستخدم غير موجود" });
     }
-    res.status(200).json(user.sendToClient());
+    res.status(200).json(user.sendToClientProfile());
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

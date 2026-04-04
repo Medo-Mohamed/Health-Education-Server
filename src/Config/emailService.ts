@@ -22,10 +22,10 @@ export const sendBrevoEmail = async (
       to: [{ email: toEmail }],
     });
 
-    console.log("تم الإرسال بنجاح:", response);
+    // console.log("تم الإرسال بنجاح:", response);
     return true;
   } catch (error) {
-    console.error("خطأ في إرسال البريد عبر BrevoClient:", error);
+    // console.error("خطأ في إرسال البريد عبر BrevoClient:", error);
     return false;
   }
 };
