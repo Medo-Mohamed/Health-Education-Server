@@ -87,6 +87,9 @@ const userSchema = new Schema<IUser>(
       required: [true, "اسم المستخدم مطلوب ولا يمكن تركه فارغاً"],
       unique: true,
       trim: true,
+      minLength: [4, "يجب ان يكون اكبر من 4"],
+      maxLength: [12, "يجب ان يكون اقل من 12"],
+      lowercase: true,
       validate: {
         validator: (v: string) => /^[a-zA-Z0-9_]+$/.test(v),
         message:

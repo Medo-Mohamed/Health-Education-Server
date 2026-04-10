@@ -412,3 +412,43 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const searchUsers = async (req: Request, res: Response) => {
+  const searchTerm =
+    (typeof req.query.searchTerm === "string"
+      ? req.query.searchTerm
+      : ""
+    ).toLowerCase() || "";
+  const page = parseInt(req.query.page ? String(req.query.page) : "1");
+  const limit = 10; // عدد المستخدمين في كل صفحة
+  const skip = (page - 1) * limit;
+  if (searchTerm.length < 4) {
+    return res
+      .status(400)
+      .json({ message: "يجب ان يكون اسم المستخدم لا يقل عن 4 أحرف" });
+  }
+  try {
+    const [users, totalUsers] = await Promise.all([
+      User.find({
+        username: { $regex: searchTerm },
+      })
+        .select("first_name last_name username avatar_url _id")
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }), // ترتيب من الأحدث للأقدم,
+      User.countDocuments({
+        username: { $regex: searchTerm },
+      }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: users,
+      currentPage: page,
+      totalPages: Math.ceil(totalUsers / limit),
+      totalResults: totalUsers,
+    });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
