@@ -67,8 +67,7 @@ export const login = (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate("local", (err: any, user: IUser, info: any) => {
     if (err) return res.status(401).json({ message: err.message });
     // if (!user) return res.status(400).json({ message: info.message });
-
-    req.logIn(user, (err) => {
+    req.logIn(user, async (err) => {
       if (err) return res.status(500).json({ message: "حدث خطأ في السيرفر" });
       if (rememberMe) {
         // اجعل الكوكي يستمر لمدة 30 يوم (بالملي ثانية)
@@ -414,6 +413,7 @@ export const updateProfile = async (req: Request, res: Response) => {
 };
 
 export const searchUsers = async (req: Request, res: Response) => {
+  const UserId = (req.user as IUser)._id;
   const searchTerm =
     (typeof req.query.searchTerm === "string"
       ? req.query.searchTerm
@@ -431,6 +431,7 @@ export const searchUsers = async (req: Request, res: Response) => {
     const [users, totalUsers] = await Promise.all([
       User.find({
         username: { $regex: searchTerm },
+        _id: { $ne: UserId },
       })
         .select("first_name last_name username avatar_url _id")
         .skip(skip)
@@ -438,6 +439,7 @@ export const searchUsers = async (req: Request, res: Response) => {
         .sort({ createdAt: -1 }), // ترتيب من الأحدث للأقدم,
       User.countDocuments({
         username: { $regex: searchTerm },
+        _id: { $ne: UserId },
       }),
     ]);
 
@@ -450,5 +452,40 @@ export const searchUsers = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
+  }
+};
+
+export const findOneUser = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const user = await User.findById(id);
+    if (!user)
+      return res.status(404).json({ message: "هذا المستخدم غير موجود" });
+    res.status(200).json(user.getOneUserInfo());
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const toggleAdmin = async (req: Request, res: Response) => {
+  const user = req.user as IUser;
+  const { id, adminState } = req.body;
+  console.log(id, adminState);
+  try {
+    const userAdmin = await User.findById(id);
+    if (!userAdmin)
+      return res.status(404).json({ message: "هذا المستخدم غير موجود" });
+
+    if (adminState) {
+      userAdmin.role = "admin";
+      await userAdmin.save();
+      return res.status(200).json({ message: "تم تغيين المستخدم كمشرف بنجاح" });
+    }
+
+    userAdmin.role = "user";
+    await userAdmin.save();
+    return res.status(200).json({ message: "تم إرجاع المشرف كمستخدم بنجاح" });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
   }
 };

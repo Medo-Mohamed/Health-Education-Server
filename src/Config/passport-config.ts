@@ -7,6 +7,11 @@ passport.use(
     { usernameField: "username" }, // أو 'username' حسب التصميم الخاص بك
     async (username, password, done) => {
       try {
+        if (username.length < 4)
+          return done(
+            { message: "البريد الإلكتروني يجب ان يكون اكبر من 4 أحرف" },
+            false,
+          );
         // console.log("Attempting to login with username:", username);
         // 1. البحث عن المستخدم وجلب الباسورد (لأننا وضعنا select: false في الـ Schema)
         const user = await User.findOne({ username }).select("+password");
@@ -18,7 +23,8 @@ passport.use(
         if (!isMatch) {
           return done({ message: "كلمة المرور غير صحيحة" }, false);
         }
-
+        user.last_login = new Date();
+        await user.save();
         return done(null, user);
       } catch (err) {
         console.error("Error during authentication:", err);
@@ -37,6 +43,10 @@ passport.serializeUser((user: any, done) => {
 passport.deserializeUser(async (id, done) => {
   try {
     const user = await User.findById(id);
+    if (user) {
+      user.last_login = new Date();
+      await user.save();
+    }
     done(null, user);
   } catch (err) {
     done(err, null);

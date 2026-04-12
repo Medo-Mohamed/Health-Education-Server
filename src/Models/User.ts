@@ -39,7 +39,7 @@ export interface IUser extends Document {
   first_name: string;
   last_name: string;
   email?: string;
-  role: "dev" | "user";
+  role: "dev" | "user" | "admin";
   avatar_url: string;
   friends: Types.ObjectId[];
   bio?: string;
@@ -72,6 +72,17 @@ export interface IUser extends Document {
   sendToClientProfile(): Omit<
     IUser,
     | "password"
+    | "__v"
+    | "is_verified"
+    | "forgetPasswordInfo"
+    | "friends"
+    | "preferences"
+  >;
+  getOneUserInfo(): Omit<
+    IUser,
+    | "_id"
+    | "password"
+    | "updated_at"
     | "__v"
     | "is_verified"
     | "forgetPasswordInfo"
@@ -130,7 +141,7 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ["dev", "user"],
+      enum: ["dev", "user", "admin"],
       default: "user",
     },
     email: {
@@ -274,6 +285,18 @@ userSchema.methods.sendToClient = function () {
   delete userObject.location;
   delete userObject.role;
 
+  return userObject;
+};
+userSchema.methods.getOneUserInfo = function () {
+  const userObject = this.toObject();
+  delete userObject.password;
+  delete userObject._id;
+  delete userObject.__v;
+  delete userObject.updated_at;
+  delete userObject.forgetPasswordInfo;
+  delete userObject.friends;
+  delete userObject.preferences;
+  delete userObject.is_verified;
   return userObject;
 };
 
