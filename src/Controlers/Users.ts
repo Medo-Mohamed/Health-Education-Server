@@ -5,6 +5,7 @@ import { sendBrevoEmail } from "../Config/emailService.ts";
 import jwt from "jsonwebtoken";
 import cloudinary from "../Config/cloudinary.ts";
 import fs from "fs";
+import Follow from "../Models/Follow.ts";
 export const createUsers = async (request: Request, response: Response) => {
   console.log("Registering user with data:", request.body); // إضافة هذا السطر لتتبع البيانات المستلمة
   try {
@@ -454,23 +455,10 @@ export const searchUsers = async (req: Request, res: Response) => {
     res.status(400).json({ message: err.message });
   }
 };
-
-export const findOneUser = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const user = await User.findById(id);
-    if (!user)
-      return res.status(404).json({ message: "هذا المستخدم غير موجود" });
-    res.status(200).json(user.getOneUserInfo());
-  } catch (error: any) {
-    res.status(400).json({ message: error.message });
-  }
-};
-
 export const toggleAdmin = async (req: Request, res: Response) => {
   const user = req.user as IUser;
   const { id, adminState } = req.body;
-  console.log(id, adminState);
+  // console.log(id, adminState);
   try {
     const userAdmin = await User.findById(id);
     if (!userAdmin)
@@ -487,5 +475,86 @@ export const toggleAdmin = async (req: Request, res: Response) => {
     return res.status(200).json({ message: "تم إرجاع المشرف كمستخدم بنجاح" });
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+  }
+};
+export const findOneUser = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const selfId = (req.user as IUser)?._id || "";
+  try {
+    const user = await User.findById(id);
+    if (!user)
+      return res.status(404).json({ message: "هذا المستخدم غير موجود" });
+
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ message: "معرف المستخدم غير صالح" });
+    }
+
+    const isFollowing = !!(await Follow.exists({
+      follower: selfId,
+      following: id,
+    }));
+    res.status(200).json(Object.assign(user.getOneUserInfo(), { isFollowing }));
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const followUser = async (req: Request, res: Response) => {
+  try {
+    const userToFollowId = req.params.id as string;
+    const selfId = (req.user as IUser)?._id.toString() || "";
+
+    if (userToFollowId === selfId) {
+      return res.status(400).json({ message: "لا يمكنك متابعة نفسك" });
+    }
+
+    await Follow.create({
+      follower: selfId,
+      following: userToFollowId,
+    });
+
+    await Promise.all([
+      // تحديث عدد الأشخاص الذين أتابعهم
+      User.findByIdAndUpdate(selfId, { $inc: { "stats.following": 1 } }),
+
+      // تحديث عدد المتابعين للشخص الآخر
+      User.findByIdAndUpdate(userToFollowId, {
+        $inc: { "stats.followers": 1 },
+      }),
+    ]);
+
+    res.status(200).json({ message: "تمت المتابعة بنجاح" });
+  } catch (error: any) {
+    if (error.code === 11000)
+      return res.status(400).json({ message: "أنت تتابعه بالفعل" });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const unfollowUser = async (req: Request, res: Response) => {
+  const followerId = (req.user as IUser)?._id.toString();
+  const followingId = typeof req.params.id === "string" ? req.params.id : "";
+
+  if (!followerId || !followingId) {
+    return res.status(400).json({ message: "معرّف المستخدم غير صحيح" });
+  }
+  try {
+    await Follow.findOneAndDelete({
+      follower: followerId,
+      following: followingId,
+    });
+
+    await Promise.all([
+      // تحديث عدد الأشخاص الذين أتابعهم
+      User.findByIdAndUpdate(followerId, { $inc: { "stats.following": -1 } }),
+
+      // تحديث عدد المتابعين للشخص الآخر
+      User.findByIdAndUpdate(followingId, {
+        $inc: { "stats.followers": -1 },
+      }),
+    ]);
+    res.status(200).json({ message: "تم إلغاء المتابعة" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
