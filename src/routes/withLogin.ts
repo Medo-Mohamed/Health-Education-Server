@@ -1,17 +1,19 @@
 import { Router } from "express";
-import { isAuthenticated } from "../../middleware/isAuth.ts";
+import { isAuthenticated } from "../middleware/isAuth.ts";
 import {
   followUser,
+  getFollowingList,
   logout,
   profileDisplay,
   refreshauth,
   unfollowUser,
   updateProfile,
-} from "../../Controlers/Users.ts";
-import { upload } from "../../middleware/upload.ts";
-import searchRoutes from "./SearchUsers/SearchUsers.ts";
-import { isDev } from "../../middleware/isDevOrAdmin.ts";
-import DevRouters from "./Dev End points/devUsers.ts";
+} from "../Controlers/Users.ts";
+import { upload } from "../middleware/upload.ts";
+import searchRoutes from "./User/SearchUsers/SearchUsers.ts";
+import { isDev } from "../middleware/isDevOrAdmin.ts";
+import DevRouters from "./User/Dev End points/devUsers.ts";
+import topicTabels from "./Topic Tabels/TT.ts";
 const router = Router();
 router.use(isAuthenticated);
 
@@ -27,8 +29,12 @@ router.route("/followuser/:id").post(followUser);
 
 router.route("/unfollowuser/:id").post(unfollowUser);
 
+router.route("/getfollowinglist").get(getFollowingList);
+
 router.use("/search", searchRoutes);
 
 router.use("/dev", DevRouters);
+
+router.use("/topictabels", topicTabels);
 
 export default router;

@@ -1,7 +1,7 @@
 import { Router } from "express";
 
-import withLogin from "./withLogin.ts";
-import withoutLogin from "./withoutLogin.ts";
+import withLogin from "../withLogin.ts";
+import withoutLogin from "../withoutLogin.ts";
 
 const router = Router();
 

@@ -5,8 +5,8 @@ import {
   createUsers,
   login,
   lostPassword,
-} from "../../Controlers/Users.ts";
-import { isNotAuthenticated } from "../../middleware/isAuth.ts";
+} from "../Controlers/Users.ts";
+import { isNotAuthenticated } from "../middleware/isAuth.ts";
 
 const router = Router();
 router.use(isNotAuthenticated);

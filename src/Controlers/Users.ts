@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import cloudinary from "../Config/cloudinary.ts";
 import fs from "fs";
 import Follow from "../Models/Follow.ts";
+import mongoose, { Types } from "mongoose";
 export const createUsers = async (request: Request, response: Response) => {
   console.log("Registering user with data:", request.body); // إضافة هذا السطر لتتبع البيانات المستلمة
   try {
@@ -423,27 +424,84 @@ export const searchUsers = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page ? String(req.query.page) : "1");
   const limit = 10; // عدد المستخدمين في كل صفحة
   const skip = (page - 1) * limit;
-  if (searchTerm.length < 4) {
+  if (searchTerm.trim().length < 4) {
     return res
       .status(400)
       .json({ message: "يجب ان يكون اسم المستخدم لا يقل عن 4 أحرف" });
   }
   try {
-    const [users, totalUsers] = await Promise.all([
-      User.find({
-        username: { $regex: searchTerm },
-        _id: { $ne: UserId },
-      })
-        .select("first_name last_name username avatar_url _id")
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 }), // ترتيب من الأحدث للأقدم,
-      User.countDocuments({
-        username: { $regex: searchTerm },
-        _id: { $ne: UserId },
-      }),
+    // const [users, totalUsers] = await Promise.all([
+    //   User.find({
+    //     username: { $regex: searchTerm },
+    //     _id: { $ne: UserId },
+    //   })
+    //     .select("first_name last_name username avatar_url _id")
+    //     .skip(skip)
+    //     .limit(limit)
+    //     .sort({ createdAt: -1 }), // ترتيب من الأحدث للأقدم,
+    //   User.countDocuments({
+    //     username: { $regex: searchTerm },
+    //     _id: { $ne: UserId },
+    //   }),
+    // ]);
+    const searchRegex = new RegExp(searchTerm, "i");
+    const [users, totalUsersResults] = await Promise.all([
+      // الاستعلام عن البيانات
+      User.aggregate([
+        {
+          $addFields: {
+            fullName: { $concat: ["$first_name", " ", "$last_name"] },
+          },
+        },
+        {
+          $match: {
+            _id: { $ne: new mongoose.Types.ObjectId(UserId) }, // تأكد من تحويل UserId لـ ObjectId
+            $or: [
+              { username: searchRegex },
+              { first_name: searchRegex },
+              { last_name: searchRegex },
+              { fullName: searchRegex },
+            ],
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            first_name: 1,
+            last_name: 1,
+            username: 1,
+            avatar_url: 1,
+            _id: 1,
+          },
+        },
+      ]),
+
+      // حساب العدد الإجمالي
+      User.aggregate([
+        {
+          $addFields: {
+            fullName: { $concat: ["$first_name", " ", "$last_name"] },
+          },
+        },
+        {
+          $match: {
+            _id: { $ne: new mongoose.Types.ObjectId(UserId) },
+            $or: [
+              { username: searchRegex },
+              { first_name: searchRegex },
+              { last_name: searchRegex },
+              { fullName: searchRegex },
+            ],
+          },
+        },
+        { $count: "total" },
+      ]),
     ]);
 
+    const totalUsers =
+      totalUsersResults.length > 0 ? totalUsersResults[0].total : 0;
     res.status(200).json({
       success: true,
       data: users,
@@ -456,13 +514,18 @@ export const searchUsers = async (req: Request, res: Response) => {
   }
 };
 export const toggleAdmin = async (req: Request, res: Response) => {
-  const user = req.user as IUser;
+  const userId = (req.user as IUser)._id.toString();
   const { id, adminState } = req.body;
   // console.log(id, adminState);
   try {
     const userAdmin = await User.findById(id);
     if (!userAdmin)
       return res.status(404).json({ message: "هذا المستخدم غير موجود" });
+
+    if (id === userId)
+      return res
+        .status(404)
+        .json({ message: "لا يمكنك تعيين هذا المستخدم كمسؤول" });
 
     if (adminState) {
       userAdmin.role = "admin";
@@ -556,5 +619,113 @@ export const unfollowUser = async (req: Request, res: Response) => {
     res.status(200).json({ message: "تم إلغاء المتابعة" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const getFollowingList = async (req: Request, res: Response) => {
+  try {
+    // console.log("Getting following list for user:");
+    const myId = (req.user as IUser)?._id.toString();
+    const searchTerm =
+      (typeof req.query.searchTerm === "string"
+        ? req.query.searchTerm
+        : ""
+      ).toLowerCase() || "";
+    const page = parseInt(req.query.page ? String(req.query.page) : "1");
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+    if (searchTerm.trim().length > 0 && searchTerm.trim().length < 4) {
+      return res
+        .status(400)
+        .json({ message: "يجب ان يكون اسم المستخدم لا يقل عن 4 أحرف" });
+    }
+
+    // هنا تضع الكود الأخير (الـ Aggregate)
+    const pipeline: any[] = [
+      // 1. فلترة سجلات المتابعة الخاصة بي فقط
+      { $match: { follower: new mongoose.Types.ObjectId(myId) } },
+
+      // 2. ربط (Join) مع جدول المستخدمين
+      {
+        $lookup: {
+          from: "users", // تأكد أن اسم الكولكشن في قاعدة البيانات هو "users"
+          localField: "following",
+          foreignField: "_id",
+          as: "user_details",
+        },
+      },
+
+      // 3. تفكيك المصفوفة الناتجة من الربط لتصبح كائناً واحداً
+      { $unwind: "$user_details" },
+    ];
+
+    if (searchTerm.trim() !== "") {
+      pipeline.push({
+        $addFields: {
+          fullName: {
+            $concat: [
+              "$user_details.first_name",
+              " ",
+              "$user_details.last_name",
+            ],
+          },
+        },
+      });
+      const searchRegex = new RegExp(searchTerm, "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { "user_details.username": searchRegex },
+            { "user_details.first_name": searchRegex },
+            { "user_details.last_name": searchRegex },
+            { fullName: searchRegex }, // الآن fullName متاح للبحث لأنه أضيف في المرحلة السابقة
+          ],
+        },
+      });
+    }
+
+    // 3. استخدام $facet للعد والجلب في خطوة واحدة
+    pipeline.push({
+      $facet: {
+        // المسار الأول: حساب العدد الإجمالي للنتائج المفلترة
+        totalCount: [{ $count: "count" }],
+        // المسار الثاني: جلب البيانات الفعلية مع الترتيب والتقسيم
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $project: {
+              _id: "$user_details._id",
+              username: "$user_details.username",
+              first_name: "$user_details.first_name",
+              last_name: "$user_details.last_name",
+              avatar_url: "$user_details.avatar_url",
+            },
+          },
+        ],
+      },
+    });
+
+    // 4. تنفيذ الاستعلام
+    const result = await Follow.aggregate(pipeline);
+
+    // 5. استخراج البيانات والعدد الكلي
+    const totalResults = result[0].totalCount[0]?.count || 0;
+    const following = result[0].data;
+    const totalPages = Math.ceil(totalResults / limit);
+
+    // إرسال النتيجة
+    res.status(200).json({
+      success: true,
+      currentPage: page,
+      totalPages,
+      totalResults,
+      data: following,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "حدث خطأ في السيرفر" });
   }
 };
