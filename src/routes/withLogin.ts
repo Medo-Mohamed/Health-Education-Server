@@ -14,6 +14,7 @@ import searchRoutes from "./User/SearchUsers/SearchUsers.ts";
 import { isDev } from "../middleware/isDevOrAdmin.ts";
 import DevRouters from "./User/Dev End points/devUsers.ts";
 import topicTabels from "./Topic Tabels/TT.ts";
+import Files from "./Files Controls/File.ts";
 const router = Router();
 router.use(isAuthenticated);
 
@@ -36,5 +37,7 @@ router.use("/search", searchRoutes);
 router.use("/dev", DevRouters);
 
 router.use("/topictabels", topicTabels);
+
+router.use("/files", Files);
 
 export default router;

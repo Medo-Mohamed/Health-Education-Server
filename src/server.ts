@@ -37,7 +37,6 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(RootRouter);
 app.use("/auth", UsersRouter);
 
 app.all("*any", (req, res) => {

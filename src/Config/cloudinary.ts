@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
-
+import multer from "multer"; // أضف هذا السطر
 // تحميل متغيرات البيئة من ملف .env
 dotenv.config();
 
@@ -12,4 +12,10 @@ cloudinary.config({
   secure: true, // لضمان استخدام بروتوكول https دائماً في الروابط الناتجة
 });
 
+const storage = multer.diskStorage({});
+
+export const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // حد أقصى 10 ميجا
+});
 export default cloudinary;

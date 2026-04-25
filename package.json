@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^5.0.3",
+    "axios": "^1.15.2",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.9.0",
     "connect-mongo": "^6.0.0",
