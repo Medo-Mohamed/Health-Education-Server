@@ -414,37 +414,127 @@ export const updateProfile = async (req: Request, res: Response) => {
   }
 };
 
+// export const searchUsers = async (req: Request, res: Response) => {
+//   const UserId = (req.user as IUser)._id;
+//   const searchTerm =
+//     (typeof req.query.searchTerm === "string"
+//       ? req.query.searchTerm
+//       : ""
+//     ).toLowerCase() || "";
+//   const page = parseInt(req.query.page ? String(req.query.page) : "1");
+//   const limit = 10; // عدد المستخدمين في كل صفحة
+//   const skip = (page - 1) * limit;
+//   if (searchTerm.trim().length < 4) {
+//     return res
+//       .status(400)
+//       .json({ message: "يجب ان يكون اسم المستخدم لا يقل عن 4 أحرف" });
+//   }
+//   try {
+//     // const [users, totalUsers] = await Promise.all([
+//     //   User.find({
+//     //     username: { $regex: searchTerm },
+//     //     _id: { $ne: UserId },
+//     //   })
+//     //     .select("first_name last_name username avatar_url _id")
+//     //     .skip(skip)
+//     //     .limit(limit)
+//     //     .sort({ createdAt: -1 }), // ترتيب من الأحدث للأقدم,
+//     //   User.countDocuments({
+//     //     username: { $regex: searchTerm },
+//     //     _id: { $ne: UserId },
+//     //   }),
+//     // ]);
+//     const searchRegex = new RegExp(searchTerm, "i");
+//     const [users, totalUsersResults] = await Promise.all([
+//       // الاستعلام عن البيانات
+//       User.aggregate([
+//         {
+//           $addFields: {
+//             fullName: { $concat: ["$first_name", " ", "$last_name"] },
+//           },
+//         },
+//         {
+//           $match: {
+//             _id: { $ne: new mongoose.Types.ObjectId(UserId) }, // تأكد من تحويل UserId لـ ObjectId
+//             $or: [
+//               { username: searchRegex },
+//               { first_name: searchRegex },
+//               { last_name: searchRegex },
+//               { fullName: searchRegex },
+//             ],
+//           },
+//         },
+//         { $sort: { createdAt: -1 } },
+//         { $skip: skip },
+//         { $limit: limit },
+//         {
+//           $project: {
+//             first_name: 1,
+//             last_name: 1,
+//             username: 1,
+//             avatar_url: 1,
+//             _id: 1,
+//           },
+//         },
+//       ]),
+
+//       // حساب العدد الإجمالي
+//       User.aggregate([
+//         {
+//           $addFields: {
+//             fullName: { $concat: ["$first_name", " ", "$last_name"] },
+//           },
+//         },
+//         {
+//           $match: {
+//             _id: { $ne: new mongoose.Types.ObjectId(UserId) },
+//             $or: [
+//               { username: searchRegex },
+//               { first_name: searchRegex },
+//               { last_name: searchRegex },
+//               { fullName: searchRegex },
+//             ],
+//           },
+//         },
+//         { $count: "total" },
+//       ]),
+//     ]);
+
+//     const totalUsers =
+//       totalUsersResults.length > 0 ? totalUsersResults[0].total : 0;
+//     res.status(200).json({
+//       success: true,
+//       data: users,
+//       currentPage: page,
+//       totalPages: Math.ceil(totalUsers / limit),
+//       totalResults: totalUsers,
+//     });
+//   } catch (err: any) {
+//     res.status(400).json({ message: err.message });
+//   }
+// };
+
 export const searchUsers = async (req: Request, res: Response) => {
   const UserId = (req.user as IUser)._id;
-  const searchTerm =
-    (typeof req.query.searchTerm === "string"
-      ? req.query.searchTerm
-      : ""
-    ).toLowerCase() || "";
+
+  // 1. استقبال النص سواء جاء باسم query أو searchTerm
+  const rawQuery = (req.query.query || req.query.searchTerm || "") as string;
+  const searchTerm = rawQuery.trim().toLowerCase();
+
   const page = parseInt(req.query.page ? String(req.query.page) : "1");
-  const limit = 10; // عدد المستخدمين في كل صفحة
+  const limit = parseInt(req.query.limit ? String(req.query.limit) : "10");
   const skip = (page - 1) * limit;
-  if (searchTerm.trim().length < 4) {
+
+  // تقليل الحد الأدنى لحرفين مثلاً ليعطي مرونة أكبر عند البحث بالبريد أو الاسم
+  if (!searchTerm || searchTerm.length < 2) {
     return res
       .status(400)
-      .json({ message: "يجب ان يكون اسم المستخدم لا يقل عن 4 أحرف" });
+      .json({ message: "يرجى إدخال حرفين على الأقل للبحث" });
   }
+
   try {
-    // const [users, totalUsers] = await Promise.all([
-    //   User.find({
-    //     username: { $regex: searchTerm },
-    //     _id: { $ne: UserId },
-    //   })
-    //     .select("first_name last_name username avatar_url _id")
-    //     .skip(skip)
-    //     .limit(limit)
-    //     .sort({ createdAt: -1 }), // ترتيب من الأحدث للأقدم,
-    //   User.countDocuments({
-    //     username: { $regex: searchTerm },
-    //     _id: { $ne: UserId },
-    //   }),
-    // ]);
     const searchRegex = new RegExp(searchTerm, "i");
+
     const [users, totalUsersResults] = await Promise.all([
       // الاستعلام عن البيانات
       User.aggregate([
@@ -455,8 +545,9 @@ export const searchUsers = async (req: Request, res: Response) => {
         },
         {
           $match: {
-            _id: { $ne: new mongoose.Types.ObjectId(UserId) }, // تأكد من تحويل UserId لـ ObjectId
+            _id: { $ne: new mongoose.Types.ObjectId(UserId) },
             $or: [
+              { email: searchRegex }, // 👈 أضفنا البحث بالبريد الإلكتروني
               { username: searchRegex },
               { first_name: searchRegex },
               { last_name: searchRegex },
@@ -472,7 +563,9 @@ export const searchUsers = async (req: Request, res: Response) => {
             first_name: 1,
             last_name: 1,
             username: 1,
+            email: 1, // 👈 أضفنا إرجاع البريد
             avatar_url: 1,
+            photo_url: "$avatar_url", // لضمان التوافق لو كان الفرونت يستقبل photo_url
             _id: 1,
           },
         },
@@ -489,6 +582,7 @@ export const searchUsers = async (req: Request, res: Response) => {
           $match: {
             _id: { $ne: new mongoose.Types.ObjectId(UserId) },
             $or: [
+              { email: searchRegex }, // 👈 البحث بالبريد
               { username: searchRegex },
               { first_name: searchRegex },
               { last_name: searchRegex },
@@ -502,17 +596,22 @@ export const searchUsers = async (req: Request, res: Response) => {
 
     const totalUsers =
       totalUsersResults.length > 0 ? totalUsersResults[0].total : 0;
-    res.status(200).json({
+
+    // 2. إرجاع استجابة مرنة تدعم كلا الواجهتين (القديمة والجديدة)
+    return res.status(200).json({
       success: true,
-      data: users,
+      data: users, // للواجهات السابقة
+      users: users, // لـ handleSearchUser (res.data.users)
+      user: users[0] || null, // لـ handleSearchUser (res.data.user)
       currentPage: page,
       totalPages: Math.ceil(totalUsers / limit),
       totalResults: totalUsers,
     });
   } catch (err: any) {
-    res.status(400).json({ message: err.message });
+    return res.status(400).json({ message: err.message });
   }
 };
+
 export const toggleAdmin = async (req: Request, res: Response) => {
   const userId = (req.user as IUser)._id.toString();
   const { id, adminState } = req.body;

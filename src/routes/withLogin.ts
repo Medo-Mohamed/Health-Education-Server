@@ -15,6 +15,8 @@ import { isDev } from "../middleware/isDevOrAdmin.ts";
 import DevRouters from "./User/Dev End points/devUsers.ts";
 import topicTabels from "./Topic Tabels/TT.ts";
 import Files from "./Files Controls/File.ts";
+import postsRoutes from "./Posts Controls/Posts.ts";
+import placesRouters from "./Places Controls/place.ts";
 const router = Router();
 router.use(isAuthenticated);
 
@@ -39,5 +41,9 @@ router.use("/dev", DevRouters);
 router.use("/topictabels", topicTabels);
 
 router.use("/files", Files);
+
+router.use("/posts", postsRoutes);
+
+router.use("/places",placesRouters);
 
 export default router;

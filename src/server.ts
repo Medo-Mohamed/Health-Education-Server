@@ -1,5 +1,5 @@
-import experss from "express";
-export const app = experss();
+import express from "express";
+export const app = express();
 import env from "dotenv";
 env.config();
 import "./Config/Listen&Connection.ts";
@@ -16,7 +16,7 @@ import "./Config/passport-config.ts";
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(experss.json());
+app.use(express.json());
 app.use(
   session({
     secret: process.env.SECRET_SESSION_KEY as string,
@@ -36,6 +36,7 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
+app.use("/uploads", express.static("uploads"));
 
 app.use("/auth", UsersRouter);
 

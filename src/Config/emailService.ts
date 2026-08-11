@@ -25,7 +25,7 @@ export const sendBrevoEmail = async (
     // console.log("تم الإرسال بنجاح:", response);
     return true;
   } catch (error) {
-    // console.error("خطأ في إرسال البريد عبر BrevoClient:", error);
+    console.error("BrevoClient ERROR :", error);
     return false;
   }
 };

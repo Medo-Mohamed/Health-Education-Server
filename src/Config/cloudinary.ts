@@ -12,7 +12,7 @@ cloudinary.config({
   secure: true, // لضمان استخدام بروتوكول https دائماً في الروابط الناتجة
 });
 
-const storage = multer.diskStorage({});
+const storage = multer.memoryStorage(); // استخدام التخزين في الذاكرة لسهولة التعامل مع الملفات قبل رفعها إلى Cloudinary
 
 export const upload = multer({
   storage,

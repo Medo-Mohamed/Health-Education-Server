@@ -1,0 +1,17 @@
+import { Router } from "express";
+import { authorizePermission } from "../../middleware/validateCreatePlace.ts";
+import { upload } from "../../Config/cloudinary.ts";
+import { getMyPlaces } from "../../Controlers/Places.ts";
+import { PlacePermission } from "../../types/placeAccess.ts";
+import placeManageRouters from "./place.manage.ts";
+import placeEmployeeRouters from "./place.employee.ts";
+
+const placesRouters = Router();
+
+placesRouters.use("/place-manage", placeManageRouters);
+
+placesRouters.use("/place-staff", placeEmployeeRouters);
+
+placesRouters.get("/my-places", getMyPlaces);
+
+export default placesRouters;
