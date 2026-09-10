@@ -166,8 +166,10 @@ PlaceEventSchema.pre("save", function (this: IPlaceEvent) {
       (this.attendees.children || 0);
   }
 
-  // 2. تفريغ اسم المكان الخارجي إذا لم تكن الفعالية ندوة خارجية
-  if (this.location_type !== EventLocationType.EXTERNAL_SEMINAR) {
+  if (
+    this.location_type === EventLocationType.INTERNAL_SEMINAR ||
+    this.location_type === EventLocationType.GENERAL_CONSULTATION
+  ) {
     this.external_location_name = null;
   }
 });

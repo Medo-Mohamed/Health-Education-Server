@@ -72,8 +72,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<PlaceRole, PlacePermission[]> = {
   ],
 
   [PlaceRole.SUPERVISOR]: [
-    PlacePermission.EDIT_PLACE_INFO,
     PlacePermission.VIEW_MEMBERS,
+
     // صلاحيات إدارة الخطط والدمج والاعتماد للمشرف
     PlacePermission.CREATE_PLAN,
     PlacePermission.EDIT_PLAN,
@@ -82,6 +82,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<PlaceRole, PlacePermission[]> = {
     PlacePermission.SUBMIT_PLAN,
     PlacePermission.APPROVE_PLAN, // اعتماد أو رفض
     PlacePermission.MERGE_PLANS, // دمج خطط الفريق
+
     // العمليات الميدانية
     PlacePermission.CREATE_EVENT,
     PlacePermission.EDIT_EVENT,
@@ -91,14 +92,15 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<PlaceRole, PlacePermission[]> = {
 
   [PlaceRole.OPERATOR]: [
     // إمكانية إنشاء مسودة خطة ورفعها للمشرف فقط (بدون اعتماد أو دمج)
-    PlacePermission.CREATE_PLAN,
-    PlacePermission.EDIT_PLAN,
+
+    // PlacePermission.CREATE_PLAN,
+    // PlacePermission.EDIT_PLAN,
     PlacePermission.VIEW_PLAN,
-    PlacePermission.SUBMIT_PLAN,
+    // PlacePermission.SUBMIT_PLAN,
     // العمليات الميدانية
     PlacePermission.CREATE_EVENT,
     PlacePermission.VIEW_PLACE,
-    PlacePermission.UPLOAD_MEDIA,
+    // PlacePermission.UPLOAD_MEDIA,
   ],
 
   [PlaceRole.VIEWER]: [PlacePermission.VIEW_PLACE, PlacePermission.VIEW_PLAN],

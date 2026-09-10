@@ -15,6 +15,7 @@ export interface AuthenticatedPlaceRequest extends Request {
     isInherited: boolean;
     grantedPlaceId: string;
     ancestorsIds: Types.ObjectId[];
+    inherit_to_children: boolean;
   };
 }
 
@@ -50,6 +51,7 @@ export const authorizePermission = (
           isInherited: false,
           grantedPlaceId: "dev",
           ancestorsIds: [],
+          inherit_to_children: true,
         };
         return next();
       }
@@ -178,12 +180,15 @@ export const authorizePermission = (
       const isInherited =
         activeRecord.place_id.toString() !== placeId.toString();
 
+      // console.log(activeRecord);
+
       req.placeAccess = {
         role: activeRecord.role,
         permissions: userPermissions,
         isInherited,
         grantedPlaceId: activeRecord.place_id.toString(),
         ancestorsIds: targetPlace.ancestors || [],
+        inherit_to_children: activeRecord.inherit_to_children,
       };
 
       return next();

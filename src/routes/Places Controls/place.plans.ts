@@ -10,6 +10,7 @@ import {
   saveDraftPlans,
   submitToPreReview,
   updateDraftPlan,
+  updateApprovedPlan,
 } from "../../Controlers/Places.ts";
 
 const placePlansRouter = Router();
@@ -70,5 +71,12 @@ placePlansRouter.post(
 //   authorizePermission(PlacePermission.MERGE_PLANS),
 //   merge_plan_to_one,
 // );
+
+//
+placePlansRouter.put(
+  "/update-approved-plan/:placeId/:planId",
+  authorizePermission([PlacePermission.EDIT_PLAN, PlacePermission.DELETE_PLAN]),
+  updateApprovedPlan,
+);
 
 export default placePlansRouter;

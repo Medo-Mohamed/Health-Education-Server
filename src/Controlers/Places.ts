@@ -15,11 +15,16 @@ import User, { type IUser } from "../Models/User.ts";
 import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace.ts";
 import mongoose, { Types } from "mongoose";
 import TopicsTables from "../Models/TopicsTables.ts";
-import { EventLocationType, PlaceEvent } from "../Models/PlaceEvent.ts";
+import {
+  EventLocationType,
+  PlaceEvent,
+  type IPlaceEvent,
+} from "../Models/PlaceEvent.ts";
 import { PlacePlan, PlanStatus, type IPlacePlan } from "../Models/PlacePlan.ts";
 
 // 3. تعديل دور أو صلاحيات موظف في المكان
-const ROLE_WEIGHTS: Record<PlaceRole, number> = {
+const ROLE_WEIGHTS: Record<PlaceRole | "dev", number> = {
+  dev: 5,
   [PlaceRole.ADMIN]: 4,
   [PlaceRole.SUPERVISOR]: 3,
   [PlaceRole.OPERATOR]: 2,
@@ -1261,31 +1266,57 @@ export const createPlaceEvent = async (
       return;
     }
 
-    // 5️⃣ حفظ البيانات في الداتابيز
-    const newEvent = await PlaceEvent.create({
+
+    let event = await PlaceEvent.findOne({
       place_id: new Types.ObjectId(placeId as string),
       created_by: new Types.ObjectId(userId),
       schedule_name: schedule_name.trim(),
       main_topic: main_topic.trim(),
       sub_topic: sub_topic.trim(),
-      seminars_count: Number(seminars_count) || 1,
       location_type: location_type || EventLocationType.INTERNAL_SEMINAR,
       external_location_name: requiresExternalLocation
         ? external_location_name.trim()
         : null,
-      attendees: {
-        males: malesCount,
-        females: femalesCount,
-        children: childrenCount,
-      },
       instructor_info: new Types.ObjectId(instructor_info),
       event_date: new Date(event_date),
     });
 
+    if (event) {
+      // console.log("old");
+      event.seminars_count += Number(seminars_count);
+      event.attendees.children += childrenCount;
+      event.attendees.females += femalesCount;
+      event.attendees.males += malesCount;
+      await event.save();
+    } else {
+      // console.log("new");
+      event = await PlaceEvent.create({
+        place_id: new Types.ObjectId(placeId as string),
+        created_by: new Types.ObjectId(userId),
+        schedule_name: schedule_name.trim(),
+        main_topic: main_topic.trim(),
+        sub_topic: sub_topic.trim(),
+        seminars_count: Number(seminars_count) || 1,
+        location_type: location_type || EventLocationType.INTERNAL_SEMINAR,
+        external_location_name: requiresExternalLocation
+          ? external_location_name.trim()
+          : null,
+        attendees: {
+          males: malesCount,
+          females: femalesCount,
+          children: childrenCount,
+        },
+        instructor_info: new Types.ObjectId(instructor_info),
+        event_date: new Date(event_date),
+      });
+    }
+
+    // 5️⃣ حفظ البيانات في الداتابيز
+
     res.status(201).json({
       success: true,
       message: "تم حفظ الندوة بنجاح.",
-      data: newEvent,
+      data: event,
     });
   } catch (error: any) {
     console.error("خطأ أثناء حفظ الندوة:", error);
@@ -2502,3 +2533,786 @@ export const approve_place_plans = async (
 //     return res.status(500).json({ success: false, message: error.message });
 //   }
 // };
+
+//
+export const getPlacesAndSchedules = async (
+  req: AuthenticatedPlaceRequest,
+  res: Response,
+) => {
+  try {
+    const placeId = req.params.placeId;
+
+    if (!placeId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "معرف المكان (placeId) مطلوب." });
+    }
+    // 1. جلب جميع الأماكن
+    const places = await Place.find({
+      ancestors: new Types.ObjectId(placeId as string),
+    })
+      .select("name _id")
+      .lean();
+    const parentPlace = await Place.findById(placeId).select("name _id").lean();
+    if (parentPlace) {
+      places.unshift(parentPlace);
+    }
+
+    // 2. جلب جداول الموضوعات
+    const tables = await TopicsTables.find().lean();
+
+    res.status(200).json({ success: true, places, tables });
+  } catch (error: any) {
+    console.error("Error in getPlacesAndSchedules:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const filterEventsAndPlans = async (
+  req: AuthenticatedPlaceRequest,
+  res: Response,
+) => {
+  try {
+    const { selectedPlaces, selectedEventTypes, dateRange, topicsFilter } =
+      req.body;
+
+    // --- 0. التحقق من صحة البيانات (Validation) ---
+
+    // التأكد من وجود الـ Body ككائن
+    if (!req.body || typeof req.body !== "object") {
+      return res.status(400).json({
+        success: false,
+        message: "بيانات الطلب غير صالحة (Body is missing or invalid)",
+      });
+    }
+
+    // التحقق من صحة مصفوفات الأماكن والأنواع إذا أُرسلت
+    if (selectedPlaces && !Array.isArray(selectedPlaces)) {
+      return res.status(400).json({
+        success: false,
+        message: "حقل selectedPlaces يجب أن يكون مصفوفة (Array)",
+      });
+    }
+
+    if (selectedEventTypes && !Array.isArray(selectedEventTypes)) {
+      return res.status(400).json({
+        success: false,
+        message: "حقل selectedEventTypes يجب أن يكون مصفوفة (Array)",
+      });
+    }
+
+    // التحقق من صحة التواريخ وإمكانية تحويلها لـ Dates صالحة
+    if (dateRange) {
+      if (typeof dateRange !== "object") {
+        return res.status(400).json({
+          success: false,
+          message: "حقل dateRange يجب أن يكون كائن (Object)",
+        });
+      }
+
+      if (dateRange.start && isNaN(Date.parse(dateRange.start))) {
+        return res.status(400).json({
+          success: false,
+          message: "تاريخ البداية (dateRange.start) غير صالح",
+        });
+      }
+
+      if (dateRange.end && isNaN(Date.parse(dateRange.end))) {
+        return res.status(400).json({
+          success: false,
+          message: "تاريخ النهاية (dateRange.end) غير صالح",
+        });
+      }
+    }
+
+    // التحقق من صحة كائن الفلترة بالمواد/الموضوعات
+    if (topicsFilter) {
+      if (typeof topicsFilter !== "object") {
+        return res.status(400).json({
+          success: false,
+          message: "حقل topicsFilter يجب أن يكون كائن (Object)",
+        });
+      }
+
+      if (
+        topicsFilter.customTopics &&
+        !Array.isArray(topicsFilter.customTopics)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "حقل customTopics يجب أن يكون مصفوفة (Array)",
+        });
+      }
+    }
+
+    const startDate = new Date(dateRange.start);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(dateRange.end);
+    endDate.setHours(23, 59, 59, 999);
+
+    // --- بناء استعلام MongoDB ---
+
+    let query: Record<string, any> = {};
+
+    // 1. فلترة نطاق الأماكن
+    if (
+      selectedPlaces &&
+      !selectedPlaces.includes("ALL") &&
+      selectedPlaces.length > 0
+    ) {
+      query.place_id = { $in: selectedPlaces };
+    }
+
+    // 2. فلترة أنواع الندوات
+    if (
+      selectedEventTypes &&
+      !selectedEventTypes.includes("ALL") &&
+      selectedEventTypes.length > 0
+    ) {
+      query.location_type = { $in: selectedEventTypes };
+    }
+
+    // 3. فلترة الفترة الزمنية
+    if (dateRange?.start || dateRange?.end) {
+      query.planned_date = {};
+      if (dateRange.start) query.planned_date.$gte = startDate;
+      if (dateRange.end) query.planned_date.$lte = endDate;
+    }
+
+    // 4. فلترة الموضوعات (Custom Topics)
+    if (
+      topicsFilter &&
+      !topicsFilter.isAllTopics &&
+      topicsFilter.customTopics?.length > 0
+    ) {
+      const topicConditions = topicsFilter.customTopics.map(
+        (topic: { schedule_name: any; mainTopic: any; subTopic: any }) => {
+          const condition: Record<string, any> = {
+            schedule_name: topic.schedule_name,
+          };
+          if (topic.mainTopic) condition.main_topic = topic.mainTopic;
+          if (topic.subTopic) condition.sub_topic = topic.subTopic;
+          return condition;
+        },
+      );
+
+      query.$or = topicConditions;
+    }
+
+    const plans = await PlacePlan.find(query).populate([
+      {
+        path: "place_id",
+        select: "name metadata.photo_url",
+      },
+      {
+        path: "created_by",
+        select: "first_name last_name email avatar_url",
+      },
+    ]);
+
+    let events: IPlaceEvent[] = [];
+    if (ROLE_WEIGHTS[req.placeAccess?.role as PlaceRole] >= 2) {
+      delete query.planned_date; // إزالة شرط التاريخ من الاستعلام للحصول على الأحداث بشكل منفصل
+
+      query.event_date = { $gte: startDate, $lte: endDate };
+
+      events = await PlaceEvent.find(query).populate([
+        {
+          path: "place_id",
+          select: "name metadata.photo_url",
+        },
+        {
+          path: "instructor_info",
+          select: "first_name last_name email avatar_url",
+        },
+      ]);
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: events.length,
+      events,
+      plans,
+    });
+  } catch (error: any) {
+    console.log("Error in filterEventsAndPlans:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "حدث خطأ أثناء جلب البيانات",
+      error: error.message,
+    });
+  }
+};
+
+export const updateApprovedPlan = async (req: Request, res: Response) => {
+  try {
+    const { placeId, planId } = req.params;
+    const { action, count, ...updateData } = req.body;
+    const adminUserId = req.user?._id; // ID الشخص المسؤول عن الاعتماد/التعديل
+
+    // توحيد الحقل القادم من الفرونت (سواء كان count أو target_seminars_count)
+    const seminarsCount = count ?? updateData.target_seminars_count;
+
+    const isNew = planId === "new" || action === "CREATE";
+
+    // دالة مساعدة لتوحيد شكل البيانات المرجعة للفرونت إند
+    const formatResponseData = (doc: any) => {
+      const plainObj = doc.toObject ? doc.toObject() : doc;
+      return {
+        ...plainObj,
+        id: plainObj._id.toString(),
+        count: plainObj.target_seminars_count ?? 1,
+      };
+    };
+
+    // ==========================================
+    // 1. سيناريو إضافة صف جديد معتمد بواسطة المسؤول
+    // ==========================================
+    if (isNew) {
+      if (!placeId) {
+        return res.status(400).json({
+          success: false,
+          message: "معرف المكان (placeId) مطلوب لإضافة صف جديد",
+        });
+      }
+
+      // تحديد صاحب الخطة الأصلي (أو المسؤول إن لم يحدد)
+      const targetUserId = updateData.created_by || adminUserId;
+
+      const externalLocation =
+        updateData.location_type === "external_seminar" ||
+        updateData.location_type === "public_meeting" ||
+        updateData.location_type === "convoy_seminars"
+          ? updateData.external_location_name
+          : null;
+
+      // البحث عن صف مطابق **معتمد (APPROVED)** لنفس الموظف
+      const existingMatchingPlan = await PlacePlan.findOne({
+        _id: { $ne: new Types.ObjectId(planId as string) },
+        place_id: placeId,
+        created_by: new Types.ObjectId(targetUserId),
+        schedule_name: updateData.schedule_name,
+        main_topic: updateData.main_topic,
+        sub_topic: updateData.sub_topic,
+        location_type: updateData.location_type,
+        external_location_name: externalLocation,
+        planned_date: updateData.planned_date,
+        status: PlanStatus.APPROVED,
+      });
+
+      if (existingMatchingPlan) {
+        existingMatchingPlan.target_seminars_count += seminarsCount || 1;
+
+        existingMatchingPlan.media_outlets_count =
+          (existingMatchingPlan.media_outlets_count || 0) +
+          (updateData.media_outlets_count || 0);
+
+        existingMatchingPlan.digital_media_activities_count =
+          (existingMatchingPlan.digital_media_activities_count || 0) +
+          (updateData.digital_media_activities_count || 0);
+
+        if (updateData.target_attendees) {
+          existingMatchingPlan.target_attendees = {
+            males:
+              (existingMatchingPlan.target_attendees?.males || 0) +
+              (updateData.target_attendees.males || 0),
+            females:
+              (existingMatchingPlan.target_attendees?.females || 0) +
+              (updateData.target_attendees.females || 0),
+            children:
+              (existingMatchingPlan.target_attendees?.children || 0) +
+              (updateData.target_attendees.children || 0),
+          };
+        }
+
+        existingMatchingPlan.target_total_attendees =
+          (existingMatchingPlan.target_attendees.males || 0) +
+          (existingMatchingPlan.target_attendees.females || 0) +
+          (existingMatchingPlan.target_attendees.children || 0);
+
+        // تحديث الشخص الذي قام بالمراجعة/التعديل
+        existingMatchingPlan.reviewed_by = new Types.ObjectId(adminUserId);
+
+        await existingMatchingPlan.save();
+        await existingMatchingPlan.populate([
+          {
+            path: "place_id",
+            select: "name metadata.photo_url",
+          },
+        ]);
+        return res.status(200).json({
+          success: true,
+          message: "تم دمج الفعالية الجديدة مع صف معتمد موجود بالفعل",
+          action: "MERGED",
+          data: formatResponseData(existingMatchingPlan),
+        });
+      }
+
+      const totalAttendees =
+        (updateData.target_attendees?.males || 0) +
+        (updateData.target_attendees?.females || 0) +
+        (updateData.target_attendees?.children || 0);
+
+      const newPlan = new PlacePlan({
+        created_by: new Types.ObjectId(targetUserId),
+        reviewed_by: new Types.ObjectId(adminUserId), // تعيين ID مسؤول المراجعة
+        place_id: placeId,
+        schedule_name: updateData.schedule_name,
+        main_topic: updateData.main_topic,
+        sub_topic: updateData.sub_topic,
+        target_seminars_count: seminarsCount || 1,
+        planned_date: updateData.planned_date,
+        location_type: updateData.location_type,
+        external_location_name: externalLocation,
+        media_outlets_count: updateData.media_outlets_count || 0,
+        digital_media_activities_count:
+          updateData.digital_media_activities_count || 0,
+        target_attendees: updateData.target_attendees || {
+          males: 0,
+          females: 0,
+          children: 0,
+        },
+        target_total_attendees: totalAttendees,
+        status: PlanStatus.APPROVED, // إنشاؤها مباشرة بحالة معتمدة
+      });
+
+      await newPlan.save();
+
+      return res.status(201).json({
+        success: true,
+        message: "تمت إضافة الصف المعتمد الجديد بنجاح",
+        action: "CREATED",
+        data: formatResponseData(newPlan),
+      });
+    }
+
+    // ==========================================
+    // 2. البحث عن الصف الحالي المراد تعديله أو حذفه
+    // ==========================================
+    const currentPlan = await PlacePlan.findById(planId);
+
+    if (!currentPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "لم يتم العثور على الخطة المطلوبة",
+      });
+    }
+
+    // التحقق من أن الخطة في حالة APPROVED فقط
+    if (currentPlan.status !== PlanStatus.APPROVED) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "يمكن تعديل أو حذف الخطات المعتمدة (APPROVED) فقط عبر هذه الدالة",
+      });
+    }
+
+    // ==========================================
+    // 3. سيناريو الحذف بواسطة المسؤول
+    // ==========================================
+    if (action === "DELETE" || seminarsCount === 0) {
+      await PlacePlan.findByIdAndDelete(planId);
+      return res.status(200).json({
+        success: true,
+        message: "تم حذف صف الخطة المعتمدة بنجاح",
+        action: "DELETED",
+      });
+    }
+
+    // ==========================================
+    // 4. سيناريو التعديل والدمج بواسطة المسؤول
+    // ==========================================
+    const targetScheduleName =
+      updateData.schedule_name ?? currentPlan.schedule_name;
+    const targetMainTopic = updateData.main_topic ?? currentPlan.main_topic;
+    const targetSubTopic = updateData.sub_topic ?? currentPlan.sub_topic;
+    const targetLocationType =
+      updateData.location_type ?? currentPlan.location_type;
+
+    const targetExternalLocation =
+      targetLocationType === "external_seminar" ||
+      targetLocationType === "public_meeting" ||
+      targetLocationType === "convoy_seminars"
+        ? (updateData.external_location_name ??
+          currentPlan.external_location_name)
+        : null;
+
+    const targetPlannedDate =
+      updateData.planned_date ?? currentPlan.planned_date;
+
+    // البحث عن خطة معتمدة مطابقة لنفس الموظف صاحب الخطة
+    const existingMatchingPlan = await PlacePlan.findOne({
+      _id: { $ne: new Types.ObjectId(planId as string) },
+      place_id: currentPlan.place_id,
+      created_by: currentPlan.created_by,
+      schedule_name: targetScheduleName,
+      main_topic: targetMainTopic,
+      sub_topic: targetSubTopic,
+      location_type: targetLocationType,
+      external_location_name: targetExternalLocation,
+      planned_date: targetPlannedDate,
+      status: PlanStatus.APPROVED,
+    });
+
+    if (existingMatchingPlan) {
+      const addedSeminarsCount =
+        seminarsCount ?? currentPlan.target_seminars_count;
+      const addedAttendees =
+        updateData.target_attendees || currentPlan.target_attendees;
+
+      const addedMediaOutlets =
+        updateData.media_outlets_count ?? currentPlan.media_outlets_count ?? 0;
+      const addedDigitalMedia =
+        updateData.digital_media_activities_count ??
+        currentPlan.digital_media_activities_count ??
+        0;
+
+      existingMatchingPlan.target_seminars_count += addedSeminarsCount;
+      existingMatchingPlan.media_outlets_count =
+        (existingMatchingPlan.media_outlets_count || 0) + addedMediaOutlets;
+      existingMatchingPlan.digital_media_activities_count =
+        (existingMatchingPlan.digital_media_activities_count || 0) +
+        addedDigitalMedia;
+
+      if (addedAttendees) {
+        existingMatchingPlan.target_attendees = {
+          males:
+            (existingMatchingPlan.target_attendees?.males || 0) +
+            (addedAttendees.males || 0),
+          females:
+            (existingMatchingPlan.target_attendees?.females || 0) +
+            (addedAttendees.females || 0),
+          children:
+            (existingMatchingPlan.target_attendees?.children || 0) +
+            (addedAttendees.children || 0),
+        };
+      }
+
+      existingMatchingPlan.target_total_attendees =
+        (existingMatchingPlan.target_attendees.males || 0) +
+        (existingMatchingPlan.target_attendees.females || 0) +
+        (existingMatchingPlan.target_attendees.children || 0);
+
+      // تحديث الشخص المراجع
+      existingMatchingPlan.reviewed_by = new Types.ObjectId(adminUserId);
+
+      await existingMatchingPlan.save();
+      await PlacePlan.findByIdAndDelete(planId);
+      await existingMatchingPlan.populate([
+        {
+          path: "place_id",
+          select: "name metadata.photo_url",
+        },
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        message: "تم دمج بيانات الصف مع صف آخر معتمد بنجاح",
+        action: "MERGED",
+        data: formatResponseData(existingMatchingPlan),
+      });
+    }
+
+    // ==========================================
+    // 5. سيناريو التحديث العادي بواسطة المسؤول
+    // ==========================================
+    if (updateData.schedule_name !== undefined)
+      currentPlan.schedule_name = updateData.schedule_name;
+    if (updateData.main_topic !== undefined)
+      currentPlan.main_topic = updateData.main_topic;
+    if (updateData.sub_topic !== undefined)
+      currentPlan.sub_topic = updateData.sub_topic;
+    if (seminarsCount !== undefined)
+      currentPlan.target_seminars_count = seminarsCount;
+    if (updateData.planned_date !== undefined)
+      currentPlan.planned_date = updateData.planned_date;
+    if (updateData.location_type !== undefined)
+      currentPlan.location_type = updateData.location_type;
+
+    currentPlan.external_location_name =
+      currentPlan.location_type === "external_seminar" ||
+      currentPlan.location_type === "public_meeting" ||
+      currentPlan.location_type === "convoy_seminars"
+        ? (updateData.external_location_name ??
+          currentPlan.external_location_name)
+        : null;
+
+    if (updateData.media_outlets_count !== undefined)
+      currentPlan.media_outlets_count = updateData.media_outlets_count;
+    if (updateData.digital_media_activities_count !== undefined)
+      currentPlan.digital_media_activities_count =
+        updateData.digital_media_activities_count;
+
+    if (updateData.target_attendees !== undefined) {
+      currentPlan.target_attendees = updateData.target_attendees;
+      currentPlan.target_total_attendees =
+        (updateData.target_attendees.males || 0) +
+        (updateData.target_attendees.females || 0) +
+        (updateData.target_attendees.children || 0);
+    }
+
+    // تسجيل معرف الشخص الذي أجرى التعديل في حقل reviewed_by
+    currentPlan.reviewed_by = new Types.ObjectId(adminUserId);
+
+    await currentPlan.save();
+    await currentPlan.populate([
+      {
+        path: "place_id",
+        select: "name metadata.photo_url",
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "تم حفظ تعديلات الخطة المعتمدة بنجاح",
+      action: "UPDATED",
+      data: formatResponseData(currentPlan),
+    });
+  } catch (error: any) {
+    console.log("Error in updateApprovedPlan:", error.message);
+    return res.status(400).json({
+      success: false,
+      message: error.message || "حدث خطأ أثناء تحديث الخطة المعتمدة",
+    });
+  }
+};
+
+export const updateEvent = async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const { count, ...updateData } = req.body;
+
+    // توحيد الحقل القادم من الفرونت (سواء كان count أو seminars_count)
+    const seminarsCount = count ?? updateData.seminars_count;
+
+    // دالة مساعدة لتوحيد شكل البيانات المرجعة للفرونت إند
+    const formatResponseData = (doc: any) => {
+      const plainObj = doc.toObject ? doc.toObject() : doc;
+      return {
+        ...plainObj,
+        id: plainObj._id.toString(),
+        count: plainObj.seminars_count ?? 1,
+      };
+    };
+
+    // 1. البحث عن الندوة الحالية المراد تعديلها
+    const currentEvent = await PlaceEvent.findById(eventId);
+
+    if (!currentEvent) {
+      return res.status(404).json({
+        success: false,
+        message: "لم يتم العثور على الندوة المطلوبة",
+      });
+    }
+
+    // console.log(updateData.external_location_name);
+    // 2. تجهيز البيانات المستهدفة للتعديل
+    const targetScheduleName =
+      updateData.schedule_name ?? currentEvent.schedule_name;
+    const targetMainTopic = updateData.main_topic ?? currentEvent.main_topic;
+    const targetSubTopic = updateData.sub_topic ?? currentEvent.sub_topic;
+    const targetLocationType =
+      updateData.location_type ?? currentEvent.location_type;
+
+    const targetExternalLocation =
+      targetLocationType === EventLocationType.EXTERNAL_SEMINAR ||
+      targetLocationType === EventLocationType.PUBLIC_MEETING ||
+      targetLocationType === EventLocationType.CONVOY_SEMINARS
+        ? (updateData.external_location_name ??
+          currentEvent.external_location_name)
+        : null;
+
+    // تجهيز التاريخ وتصفير الوقت تماماً (بداية ونهاية اليوم للمقارنة)
+    const rawTargetDate =
+      updateData.event_date ?? updateData.date ?? currentEvent.event_date;
+
+    const startOfDay = new Date(rawTargetDate);
+    startOfDay.setUTCHours(0, 0, 0, 0); // بداية اليوم
+
+    const endOfDay = new Date(rawTargetDate);
+    endOfDay.setUTCHours(23, 59, 59, 999); // نهاية اليوم
+
+    const targetInstructorInfo =
+      updateData.instructor_info ?? currentEvent.instructor_info;
+
+    // 3. البحث عن ندوة مطابقة أخرى (غير الحالية) لنفس الموظف والمحاضر والبيانات في نفس اليوم
+    const existingMatchingEvent = await PlaceEvent.findOne({
+      _id: { $ne: new Types.ObjectId(eventId as string) },
+      place_id: currentEvent.place_id,
+      instructor_info: new Types.ObjectId(targetInstructorInfo),
+      schedule_name: targetScheduleName,
+      main_topic: targetMainTopic,
+      sub_topic: targetSubTopic,
+      location_type: targetLocationType,
+      external_location_name: targetExternalLocation,
+      event_date: { $gte: startOfDay, $lte: endOfDay }, // نطاق اليوم بالكامل بدلاً من مقارنة الوقت
+    });
+
+    // سيناريو الدمج في حال وجود سجل مطابق في نفس اليوم
+    if (existingMatchingEvent) {
+      const addedSeminarsCount = seminarsCount ?? currentEvent.seminars_count;
+      const addedAttendees = updateData.attendees || currentEvent.attendees;
+
+      const addedMediaOutlets =
+        updateData.media_outlets_count ??
+        (currentEvent as any).media_outlets_count ??
+        0;
+      const addedDigitalMedia =
+        updateData.digital_media_activities_count ??
+        (currentEvent as any).digital_media_activities_count ??
+        0;
+
+      existingMatchingEvent.seminars_count += addedSeminarsCount;
+
+      if (addedMediaOutlets !== undefined) {
+        (existingMatchingEvent as any).media_outlets_count =
+          ((existingMatchingEvent as any).media_outlets_count || 0) +
+          addedMediaOutlets;
+      }
+
+      if (addedDigitalMedia !== undefined) {
+        (existingMatchingEvent as any).digital_media_activities_count =
+          ((existingMatchingEvent as any).digital_media_activities_count || 0) +
+          addedDigitalMedia;
+      }
+
+      if (addedAttendees) {
+        existingMatchingEvent.attendees = {
+          males:
+            (existingMatchingEvent.attendees?.males || 0) +
+            (addedAttendees.males || 0),
+          females:
+            (existingMatchingEvent.attendees?.females || 0) +
+            (addedAttendees.females || 0),
+          children:
+            (existingMatchingEvent.attendees?.children || 0) +
+            (addedAttendees.children || 0),
+        };
+      }
+
+      existingMatchingEvent.total_attendees =
+        (existingMatchingEvent.attendees.males || 0) +
+        (existingMatchingEvent.attendees.females || 0) +
+        (existingMatchingEvent.attendees.children || 0);
+
+      await existingMatchingEvent.save();
+      await PlaceEvent.findByIdAndDelete(eventId); // حذف السجل القديم بعد دمج بياناته
+      await existingMatchingEvent.populate([
+        { path: "place_id", select: "name metadata.photo_url" },
+        {
+          path: "instructor_info",
+          select: "first_name last_name avatar_url email",
+        },
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        message: "تم دمج بيانات الندوة مع ندوة أخرى مطابقة بنجاح",
+        action: "MERGED",
+        data: formatResponseData(existingMatchingEvent),
+      });
+    }
+
+    // 4. سيناريو التحديث العادي (حالة عدم وجود سجل آخر مطابق)
+    if (updateData.schedule_name !== undefined)
+      currentEvent.schedule_name = updateData.schedule_name;
+    if (updateData.main_topic !== undefined)
+      currentEvent.main_topic = updateData.main_topic;
+    if (updateData.sub_topic !== undefined)
+      currentEvent.sub_topic = updateData.sub_topic;
+    if (seminarsCount !== undefined)
+      currentEvent.seminars_count = seminarsCount;
+
+    // حفظ التاريخ مصفّر الوقت (ساعات 00:00:00)
+    if (updateData.event_date !== undefined || updateData.date !== undefined) {
+      const cleanDate = new Date(updateData.event_date || updateData.date);
+      cleanDate.setUTCHours(0, 0, 0, 0);
+      currentEvent.event_date = cleanDate;
+    }
+
+    if (updateData.location_type !== undefined)
+      currentEvent.location_type = updateData.location_type;
+    if (updateData.instructor_info !== undefined)
+      currentEvent.instructor_info = new Types.ObjectId(
+        updateData.instructor_info,
+      );
+
+    currentEvent.external_location_name =
+      currentEvent.location_type === EventLocationType.EXTERNAL_SEMINAR ||
+      currentEvent.location_type === EventLocationType.PUBLIC_MEETING ||
+      currentEvent.location_type === EventLocationType.CONVOY_SEMINARS
+        ? (updateData.external_location_name ??
+          currentEvent.external_location_name)
+        : null;
+
+    if (updateData.media_outlets_count !== undefined)
+      (currentEvent as any).media_outlets_count =
+        updateData.media_outlets_count;
+    if (updateData.digital_media_activities_count !== undefined)
+      (currentEvent as any).digital_media_activities_count =
+        updateData.digital_media_activities_count;
+
+    if (updateData.attendees !== undefined) {
+      currentEvent.attendees = updateData.attendees;
+      currentEvent.total_attendees =
+        (updateData.attendees.males || 0) +
+        (updateData.attendees.females || 0) +
+        (updateData.attendees.children || 0);
+    }
+
+    await currentEvent.save();
+    await currentEvent.populate([
+      { path: "place_id", select: "name metadata.photo_url" },
+      {
+        path: "instructor_info",
+        select: "first_name last_name avatar_url email",
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "تم حفظ تعديلات الندوة بنجاح",
+      action: "UPDATED",
+      data: formatResponseData(currentEvent),
+    });
+  } catch (error: any) {
+    console.log("Error in updateApprovedEvent:", error.message);
+    return res.status(400).json({
+      success: false,
+      message: error.message || "حدث خطأ أثناء تحديث بيانات الندوة",
+    });
+  }
+};
+
+export const deleteEvent = async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+
+    // 1. البحث عن الندوة وحذفها
+    const deletedEvent = await PlaceEvent.findByIdAndDelete(eventId);
+
+    // 2. التحقق من وجود الندوة قبل الحذف
+    if (!deletedEvent) {
+      return res.status(404).json({
+        success: false,
+        message: "لم يتم العثور على الندوة المطلوبة للحذف",
+      });
+    }
+
+    // 3. إرجاع استجابة بالنجاح مع بيانات الندوة المحذوفة
+    return res.status(200).json({
+      success: true,
+      message: "تم حذف الندوة بنجاح",
+      data: {
+        id: deletedEvent._id.toString(),
+      },
+    });
+  } catch (error: any) {
+    console.log("Error in deleteEvent:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "حدث خطأ أثناء حذف الندوة",
+    });
+  }
+};

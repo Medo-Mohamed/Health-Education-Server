@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { authorizePermission } from "../../middleware/validateCreatePlace.ts";
 import { PlacePermission } from "../../types/placeAccess.ts";
-import { checkCanCreatePlaceEvent, createPlaceEvent } from "../../Controlers/Places.ts";
+import {
+  checkCanCreatePlaceEvent,
+  createPlaceEvent,
+  deleteEvent,
+  updateEvent,
+} from "../../Controlers/Places.ts";
 
 const placeEventsRouter = Router();
 
@@ -15,6 +20,18 @@ placeEventsRouter.post(
   "/save-event/:placeId",
   authorizePermission(PlacePermission.CREATE_EVENT),
   createPlaceEvent,
+);
+
+placeEventsRouter.put(
+  "/update-event/:placeId/:eventId",
+  authorizePermission(PlacePermission.EDIT_EVENT),
+  updateEvent,
+);
+
+placeEventsRouter.delete(
+  "/delete-event/:placeId/:eventId",
+  authorizePermission(PlacePermission.DELETE_EVENT),
+  deleteEvent,
 );
 
 export default placeEventsRouter;

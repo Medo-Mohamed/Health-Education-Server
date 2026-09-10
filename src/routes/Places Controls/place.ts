@@ -7,6 +7,7 @@ import placeManageRouters from "./place.manage.ts";
 import placeEmployeeRouters from "./place.employee.ts";
 import placeEventsRouter from "./place.events.ts";
 import placePlansRouter from "./place.plans.ts";
+import placeFilterRouter from "./place.filter.ts";
 
 const placesRouters = Router();
 
@@ -17,6 +18,8 @@ placesRouters.use("/place-staff", placeEmployeeRouters);
 placesRouters.use("/place-events", placeEventsRouter);
 
 placesRouters.use("/place-plans", placePlansRouter);
+
+placesRouters.use("/place-filter", placeFilterRouter);
 
 placesRouters.get("/my-places", getMyPlaces);
 
