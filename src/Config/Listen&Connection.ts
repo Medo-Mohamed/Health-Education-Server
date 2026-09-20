@@ -3,10 +3,10 @@ import mongoose from "mongoose";
 import dbConnect from "./dbConnect.ts";
 import env from "dotenv";
 env.config();
-const Port = process.env.Port || 3000;
+const PORT = process.env.PORT || 3000;
 dbConnect();
 mongoose.connection.once("open", () => {
   console.log("Connected to Data Base MongoDB");
-  app.listen(Port, () => console.log("Server now listen on Port : " + Port));
+  app.listen(PORT, () => console.log("Server now listen on Port : " + PORT));
 });
 mongoose.connection.on("error", (e) => console.log("Error : ", e));

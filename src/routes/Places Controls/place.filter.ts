@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { filterEventsAndPlans, getPlacesAndSchedules } from "../../Controlers/Places.ts";
+import { filterEventsAndPlans, getPlacesAndSchedules } from "../../Controlers/Place.filter.ts";
 import { authorizePermission } from "../../middleware/validateCreatePlace.ts";
 import { PlacePermission } from "../../types/placeAccess.ts";
 

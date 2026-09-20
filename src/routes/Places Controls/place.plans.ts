@@ -11,7 +11,7 @@ import {
   submitToPreReview,
   updateDraftPlan,
   updateApprovedPlan,
-} from "../../Controlers/Places.ts";
+} from "../../Controlers/Place.plans.ts";
 
 const placePlansRouter = Router();
 

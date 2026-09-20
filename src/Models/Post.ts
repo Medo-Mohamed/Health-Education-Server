@@ -1,7 +1,9 @@
 import mongoose, { Types, Document } from "mongoose";
 import fs from "fs";
 import path from "path";
-
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 interface IPost extends Document {
   content?: string;
   mediaPath?: string | null;
@@ -27,7 +29,7 @@ const postSchema = new mongoose.Schema<IPost>({
   createdAt: {
     type: Date,
     default: Date.now,
-    index: { expires: "24h" }, // سيتم حذف السجل من القاعدة تلقائياً بعد 24 ساعة
+    // index: { expires: "24h" }, // سيتم حذف السجل من القاعدة تلقائياً بعد 24 ساعة
   },
   expiresAt: {
     type: Date,
@@ -37,25 +39,25 @@ const postSchema = new mongoose.Schema<IPost>({
       date.setDate(date.getDate() + 30);
       return date;
     },
-    index: { expires: 0 }, // يحذف المستند فور حلول التاريخ الموجود في expiresAt
+    // index: { expires: 0 }, // يحذف المستند فور حلول التاريخ الموجود في expiresAt
   },
 });
 
-// "Middleware" لحذف الملف من السيرفر قبل حذف السجل من القاعدة
-postSchema.pre("deleteOne", { document: true, query: false }, function (next) {
-  // التأكد من الوصول للمسار الصحيح للملف
-  if (this.mediaPath) {
-    const filePath = path.join(__dirname, "..", this.mediaPath);
-
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("فشل حذف الملف الفيزيائي:", err);
-      } else {
-        console.log("تم حذف الملف بنجاح عند مسح السجل");
-      }
-    });
-  }
-});
+// // "Middleware" لحذف الملف من السيرفر قبل حذف السجل من القاعدة
+// postSchema.pre("deleteOne", { document: true, query: false }, function (next) {
+//   // التأكد من الوصول للمسار الصحيح للملف
+//   if (this.mediaPath) {
+//     const filePath = path.join(__dirname, "..", this.mediaPath);
+//     if (fs.existsSync(filePath))
+//       fs.unlink(filePath, (err) => {
+//         if (err) {
+//           console.error("فشل حذف الملف الفيزيائي:", err);
+//         } else {
+//           console.log("تم حذف الملف بنجاح عند مسح السجل");
+//         }
+//       });
+//   }
+// });
 
 const Post = mongoose.model<IPost>("Post", postSchema);
 export default Post;

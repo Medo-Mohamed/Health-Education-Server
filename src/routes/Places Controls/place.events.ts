@@ -6,7 +6,7 @@ import {
   createPlaceEvent,
   deleteEvent,
   updateEvent,
-} from "../../Controlers/Places.ts";
+} from "../../Controlers/Place.event.ts";
 
 const placeEventsRouter = Router();
 

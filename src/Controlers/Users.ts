@@ -8,7 +8,7 @@ import fs from "fs";
 import Follow from "../Models/Follow.ts";
 import mongoose, { Types } from "mongoose";
 export const createUsers = async (request: Request, response: Response) => {
-  console.log("Registering user with data:", request.body); // إضافة هذا السطر لتتبع البيانات المستلمة
+  // console.log("Registering user with data:", request.body); // إضافة هذا السطر لتتبع البيانات المستلمة
   try {
     const {
       username,

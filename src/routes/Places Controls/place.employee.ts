@@ -8,7 +8,7 @@ import {
   getStaffPermissions,
   removeStaffFromPlace,
   updateStaffAccess,
-} from "../../Controlers/Places.ts";
+} from "../../Controlers/Place.employee.ts";
 
 const placeEmployeeRouters = Router();
 

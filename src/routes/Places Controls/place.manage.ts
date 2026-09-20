@@ -6,7 +6,7 @@ import {
   createPlace,
   getPlaceDetails,
   validateParentPlace,
-} from "../../Controlers/Places.ts";
+} from "../../Controlers/Place.manage.ts";
 
 const placeManageRouters = Router();
 
