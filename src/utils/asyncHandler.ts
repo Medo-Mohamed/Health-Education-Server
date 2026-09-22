@@ -1,10 +1,14 @@
-import type { Response, Request, NextFunction } from "express";
+import type { Response, Request, NextFunction, RequestHandler } from "express";
 
-const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => unknown,
-) => {
-  return function (req: Request, res: Response, next: NextFunction) {
-    Promise.resolve(fn).catch((err) => {
+type AsyncController = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => Promise<any>;
+
+const asyncHandler = (fn: AsyncController): RequestHandler => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch((err) => {
       if (process.env.status === "devolop")
         console.log({ message: err.message, err });
       res.status(500).json({ message: err.message || "حدث خطأ في السرفر" });

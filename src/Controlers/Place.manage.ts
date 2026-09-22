@@ -258,3 +258,102 @@ export const validateParentPlace = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const updatePlace = async (
+  req: AuthenticatedPlaceRequest,
+  res: Response,
+) => {
+  try {
+    const { placeId } = req.params;
+    const { name, type, metadata } = req.body;
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "غير مصرح، يرجى تسجيل الدخول أولاً.",
+      });
+    }
+
+    // 1. التحقق من وجود المكان المراد تعديله
+    const existingPlace = await Place.findById(placeId);
+    if (!existingPlace) {
+      return res.status(404).json({
+        success: false,
+        message: "المكان المراد تعديله غير موجود.",
+      });
+    }
+
+    // 3. رفع الصورة الجديدة إلى Cloudinary إذا أُرفق ملف جديد
+    let uploadedPhotoUrl: string | undefined = undefined;
+    const file = req.file as { buffer: Buffer } | undefined;
+
+    if (file) {
+      uploadedPhotoUrl = await new Promise<string>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "places",
+            resource_type: "image",
+            timeout: 120000,
+            transformation: [{ quality: "auto:good", fetch_format: "auto" }],
+          },
+          (error, result) => {
+            if (error || !result) {
+              return reject(
+                error || new Error("فشل رفع الصورة إلى Cloudinary"),
+              );
+            }
+            resolve(result.secure_url);
+          },
+        );
+
+        stream.end(file.buffer);
+      });
+    }
+
+    // 4. فك تشفير وتأطير الـ Metadata القادم من FormData
+    let parsedMetadata: Record<string, any> = {};
+    if (metadata) {
+      if (typeof metadata === "string") {
+        try {
+          parsedMetadata = JSON.parse(metadata);
+        } catch (e) {
+          parsedMetadata = {};
+        }
+      } else if (typeof metadata === "object") {
+        parsedMetadata = metadata;
+      }
+    }
+
+    // 5. تحديث البيانات الأساسية والـ Metadata
+    if (name) existingPlace.name = name.trim();
+    if (type) existingPlace.type = type;
+
+    // دمج الـ Metadata القديم مع القادم في الطلب، مع إعطاء الأولوية لرابط الصورة الجديد
+    const finalPhotoUrl =
+      uploadedPhotoUrl ||
+      parsedMetadata.photo_url ||
+      existingPlace.metadata?.photo_url;
+
+    existingPlace.metadata = {
+      ...(existingPlace.metadata || {}),
+      ...parsedMetadata,
+      ...(finalPhotoUrl ? { photo_url: finalPhotoUrl } : {}),
+    };
+
+    // حفظ التغييرات في قاعدة البيانات
+    await existingPlace.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "تم تحديث بيانات المكان بنجاح.",
+      place: existingPlace,
+    });
+  } catch (error: any) {
+    console.error("خطأ أثناء تعديل المكان:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "حدث خطأ في السيرفر أثناء تعديل المكان.",
+    });
+  }
+};

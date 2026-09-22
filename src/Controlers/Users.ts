@@ -66,7 +66,7 @@ export const createUsers = async (request: Request, response: Response) => {
 
 export const login = (req: Request, res: Response, next: NextFunction) => {
   const { rememberMe } = req.body; // استخراج القيمة من الطلب
-  passport.authenticate("local", (err: any, user: IUser, info: any) => {
+  return passport.authenticate("local", (err: any, user: IUser, info: any) => {
     if (err) return res.status(401).json({ message: err.message });
     // if (!user) return res.status(400).json({ message: info.message });
     req.logIn(user, async (err) => {
@@ -266,7 +266,6 @@ export const refreshauth = async (req: Request, res: Response) => {
   // console.log("refresh auth", req.user);
   const { _id } = req.user as IUser;
   try {
-    // console.log("refresh auth");
     if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "يرجى تسجيل الدخول أولاً" });
     }

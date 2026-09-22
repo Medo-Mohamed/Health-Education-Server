@@ -44,6 +44,6 @@ router.use("/files", Files);
 
 router.use("/posts", postsRoutes);
 
-router.use("/places",placesRouters);
+router.use("/places", placesRouters);
 
 export default router;
