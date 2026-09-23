@@ -1,10 +1,17 @@
 import type { Request, Response } from "express";
 import { Place } from "../Models/Place.ts";
 import mongoose from "mongoose";
-import { UserPlaceAccess, type ICustomPermission } from "../Models/UserPlaceAccess.ts";
+import {
+  UserPlaceAccess,
+  type ICustomPermission,
+} from "../Models/UserPlaceAccess.ts";
 import { Types } from "mongoose";
 import User from "../Models/User.ts";
-import { DEFAULT_ROLE_PERMISSIONS, PlacePermission, PlaceRole } from "../types/placeAccess.ts";
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  PlacePermission,
+  PlaceRole,
+} from "../types/placeAccess.ts";
 import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace.ts";
 import { ROLE_WEIGHTS } from "./Places.ts";
 
@@ -625,13 +632,6 @@ export const removeStaffFromPlace = async (req: Request, res: Response) => {
     const targetUserId = targetAccess.user_id.toString();
     const currentUserId = currentUser._id.toString();
 
-    // 🔴 الشرط 2: لا يمكن للشخص حذف نفسه
-    if (targetUserId === currentUserId) {
-      return res.status(400).json({
-        message: "لا يمكنك إزالة صلاحيتك الخاصة بنفسك من هذا المكان.",
-      });
-    }
-
     // 🟢 الشرط 1 (أ): إذا كان المستخدم Dev أو Super Admin -> حذف فوراً
     const isDevOrSuperAdmin = currentUser.role === "dev";
 
@@ -641,7 +641,13 @@ export const removeStaffFromPlace = async (req: Request, res: Response) => {
         .status(200)
         .json({ message: "تمت إزالة الموظف بنجاح بواسطة مسؤول النظام." });
     }
-
+    
+    // 🔴 الشرط 2: لا يمكن للشخص حذف نفسه
+    if (targetUserId === currentUserId) {
+      return res.status(400).json({
+        message: "لا يمكنك إزالة صلاحيتك الخاصة بنفسك من هذا المكان.",
+      });
+    }
     // 🟢 الشرط 1 (ب): إذا كان المستخدم الحالي هو من منح هذه الصلاحية (granted_by) -> حذف فوراً
     // const isGrantedBy =
     //   targetAccess.granted_by &&
