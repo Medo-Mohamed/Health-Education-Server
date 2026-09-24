@@ -280,12 +280,20 @@ export const refreshauth = async (req: Request, res: Response) => {
 };
 
 export const profileDisplay = async (req: Request, res: Response) => {
-  const { _id } = req.user as IUser;
+  const { id } = req.params;
+  const { _id, role } = req.user as IUser;
   try {
-    if (!req.isAuthenticated() || !req.user) {
-      return res.status(401).json({ message: "يرجى تسجيل الدخول أولاً" });
+    if (!Types.ObjectId.isValid(id as string)) {
+      return res.status(400).json({
+        message: "معرف الصفحة الشخية غير صالح",
+      });
     }
-    const user = await User.findById(_id);
+    if (id !== _id.toString() && role !== "dev") {
+      return res.status(403).json({
+        message: "ليس لديك الصلاحيات الكافية لعرض بيانات الصفحة الشخصية",
+      });
+    }
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: "المستخدم غير موجود" });
     }
@@ -296,21 +304,32 @@ export const profileDisplay = async (req: Request, res: Response) => {
 };
 
 export const updateProfile = async (req: Request, res: Response) => {
-  const { _id } = req.user as IUser;
+  const { id } = req.params;
+  const { _id, role } = req.user as IUser;
 
   try {
+    if (!Types.ObjectId.isValid(id as string)) {
+      return res.status(400).json({
+        message: "معرف الصفحة الشخية غير صالح",
+      });
+    }
+    if (id !== _id.toString() && role !== "dev") {
+      return res.status(403).json({
+        message: "ليس لديك الصلاحيات الكافية لتعديل بيانات الصفحة الشخصية",
+      });
+    }
     // 1. استخراج النصوص الأساسية من الـ Body
     const { first_name, last_name, bio, email, oldPassword, newPassword } =
       req.body;
     // console.log("Received update data:", req.body);
 
     // 5. تحديث قاعدة البيانات
-    const user = await User.findById(_id);
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: "المستخدم غير موجود" });
     }
 
-    if (!(await user.comparePassword(oldPassword)))
+    if (!(await user.comparePassword(oldPassword)) && role !== "dev")
       return res.status(400).json({ oldPassword: "كلمة السر غير صحيحة" });
     // 2. فك البيانات المعقدة بأمان (استخدام try-catch داخلي لكل JSON.parse)
     const parseJSON = (data: any) => {
@@ -412,106 +431,6 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
   }
 };
-
-// export const searchUsers = async (req: Request, res: Response) => {
-//   const UserId = (req.user as IUser)._id;
-//   const searchTerm =
-//     (typeof req.query.searchTerm === "string"
-//       ? req.query.searchTerm
-//       : ""
-//     ).toLowerCase() || "";
-//   const page = parseInt(req.query.page ? String(req.query.page) : "1");
-//   const limit = 10; // عدد المستخدمين في كل صفحة
-//   const skip = (page - 1) * limit;
-//   if (searchTerm.trim().length < 4) {
-//     return res
-//       .status(400)
-//       .json({ message: "يجب ان يكون اسم المستخدم لا يقل عن 4 أحرف" });
-//   }
-//   try {
-//     // const [users, totalUsers] = await Promise.all([
-//     //   User.find({
-//     //     username: { $regex: searchTerm },
-//     //     _id: { $ne: UserId },
-//     //   })
-//     //     .select("first_name last_name username avatar_url _id")
-//     //     .skip(skip)
-//     //     .limit(limit)
-//     //     .sort({ createdAt: -1 }), // ترتيب من الأحدث للأقدم,
-//     //   User.countDocuments({
-//     //     username: { $regex: searchTerm },
-//     //     _id: { $ne: UserId },
-//     //   }),
-//     // ]);
-//     const searchRegex = new RegExp(searchTerm, "i");
-//     const [users, totalUsersResults] = await Promise.all([
-//       // الاستعلام عن البيانات
-//       User.aggregate([
-//         {
-//           $addFields: {
-//             fullName: { $concat: ["$first_name", " ", "$last_name"] },
-//           },
-//         },
-//         {
-//           $match: {
-//             _id: { $ne: new mongoose.Types.ObjectId(UserId) }, // تأكد من تحويل UserId لـ ObjectId
-//             $or: [
-//               { username: searchRegex },
-//               { first_name: searchRegex },
-//               { last_name: searchRegex },
-//               { fullName: searchRegex },
-//             ],
-//           },
-//         },
-//         { $sort: { createdAt: -1 } },
-//         { $skip: skip },
-//         { $limit: limit },
-//         {
-//           $project: {
-//             first_name: 1,
-//             last_name: 1,
-//             username: 1,
-//             avatar_url: 1,
-//             _id: 1,
-//           },
-//         },
-//       ]),
-
-//       // حساب العدد الإجمالي
-//       User.aggregate([
-//         {
-//           $addFields: {
-//             fullName: { $concat: ["$first_name", " ", "$last_name"] },
-//           },
-//         },
-//         {
-//           $match: {
-//             _id: { $ne: new mongoose.Types.ObjectId(UserId) },
-//             $or: [
-//               { username: searchRegex },
-//               { first_name: searchRegex },
-//               { last_name: searchRegex },
-//               { fullName: searchRegex },
-//             ],
-//           },
-//         },
-//         { $count: "total" },
-//       ]),
-//     ]);
-
-//     const totalUsers =
-//       totalUsersResults.length > 0 ? totalUsersResults[0].total : 0;
-//     res.status(200).json({
-//       success: true,
-//       data: users,
-//       currentPage: page,
-//       totalPages: Math.ceil(totalUsers / limit),
-//       totalResults: totalUsers,
-//     });
-//   } catch (err: any) {
-//     res.status(400).json({ message: err.message });
-//   }
-// };
 
 export const searchUsers = async (req: Request, res: Response) => {
   const UserId = (req.user as IUser)._id;

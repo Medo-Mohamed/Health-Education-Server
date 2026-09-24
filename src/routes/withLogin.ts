@@ -22,9 +22,9 @@ router.use(isAuthenticated);
 
 router.route("/refreshauth").get(refreshauth);
 
-router.route("/profile").get(profileDisplay);
+router.route("/profile/:id").get(profileDisplay);
 
-router.route("/profile").patch(upload.single("avatar"), updateProfile);
+router.route("/profile/:id").patch(upload.single("avatar"), updateProfile);
 
 router.route("/logout").post(logout);
 

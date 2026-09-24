@@ -2,6 +2,33 @@ import express from "express";
 export const app = express();
 import env from "dotenv";
 env.config();
+
+/**
+ * ❗ قاعدة الكونسول الوحيدة في المشروع كله:
+ * لا يُظهر أي شيء في الطرفية إلا إذا كانت قيمة STATE في ملف البيئة .env
+ * تساوي "develop" بالضبط.
+ *
+ * الفكرة: تُكتم - تلقائياً وفي كل الملفات (Controllers/Config/routes...) -
+ * دوال console.log / console.info / console.warn / console.debug
+ * عند غير التطوير، فلا يختلط سجلّ الطلبات على المطوّر/المسرح بأي ضجيج.
+ *
+ * ملاحظة هندسية متعمّدة:
+ * console.error تُبقى شغّالة دائماً (لا تُكتم حتى في غير develop) —
+ * لأن الأخطاء الحرجة (فشل اتصال، استثناءات، فشل عمليات خادم) يجب أن
+ * تظهر في سجلّ الإنتاج دائماً؛ إخفاؤها يجعل تشخيص الأعطال مستحيلاً.
+ * لو أردت كتمها تماماً أيضاً، يكفي تفعيل السطر المُعلّق أدناه.
+ */
+const IS_DEVELOP = process.env.STATE === "devolop";
+if (!IS_DEVELOP) {
+  const silent = () => {};
+  console.log = silent;
+  console.info = silent;
+  console.warn = silent;
+  console.debug = silent;
+  // console.error = silent;
+  // console.error = silent; // (اختياري: لكتم الأخطاء أيضاً في غير تطوير)
+}
+
 import "./Config/Listen&Connection.ts";
 import cookieParser from "cookie-parser";
 import session from "express-session";
@@ -24,9 +51,9 @@ app.use(
     resave: false,
     cookie: {
       maxAge: 1000 * 60 * 60,
-      secure: false, // لأنك على http
+      secure: IS_DEVELOP ? false : true, // لأنك على http
       httpOnly: true,
-      sameSite: "lax", // 👈 ضروري جداً للسماح بتداول الكوكي بين منفذ 5173 و 5000
+      sameSite: IS_DEVELOP ? "lax" : "strict", // 👈 ضروري جداً للسماح بتداول الكوكي بين منفذ 5173 و 5000
     },
     store: MongoStore.create({
       client: mongoose.connection.getClient(),
