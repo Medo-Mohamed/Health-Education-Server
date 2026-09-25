@@ -69,3 +69,6 @@ app.use("/auth", UsersRouter);
 app.all("*any", (req, res) => {
   res.status(404).json({ message: "404 Resource not found" });
 });
+
+// تصدير التطبيق كـ Default Export لإطار Vercel Serverless
+export default app;
