@@ -1,12 +1,20 @@
-import { allowedOririns } from "./allowedOrigins";
-type NewType = (err: Error | null, allow?: boolean) => void;
+import { CorsOptions } from "cors";
+import { allowedOrigins } from "./allowedOrigins";
 
-export default {
-  origin: (origin: string | undefined, callBack: NewType) => {
-    if (!origin || allowedOririns.indexOf(origin) !== -1) {
+type CorsCallback = (err: Error | null, allow?: boolean) => void;
+
+export const corsOptions: CorsOptions = {
+  origin: (origin: string | undefined, callBack: CorsCallback) => {
+    // السماح بالطلبات إذا كانت بدون origin (مثل طلبات Server-to-Server أو Postman)
+    // أو إذا كان الـ origin موجواداً داخل قائمة العناوين المسموح بها
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callBack(null, true);
-    } else callBack(new Error("Not Allowed by Cors"));
+    } else {
+      callBack(new Error("Not Allowed by CORS"));
+    }
   },
   credentials: true,
-  optionSuccessStatus: 200,
+  optionsSuccessStatus: 200, // 👈 تم تصحيح اسم الخاصية (optionsSuccessStatus)
 };
+
+export default corsOptions;
