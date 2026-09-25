@@ -9,6 +9,13 @@ export default async function dbConnect() {
       ? process.env.LOCAL_DATABASE_URL
       : process.env.ONLINE_DATABASE_URL;
 
+    if (!databaseUrl) {
+      console.error(
+        "❌ ONLINE_DATABASE_URL is missing in Vercel Environment Variables!",
+      );
+      return;
+    }
+
     // خيار احتياطي في حال عدم تعيين STATE بشكل صحيح
     const activeUrl =
       databaseUrl ||
