@@ -51,9 +51,9 @@ app.use(
     resave: false,
     cookie: {
       maxAge: 1000 * 60 * 60,
-      secure: IS_DEVELOP ? false : true, // لأنك على http
+      secure: IS_DEVELOP ? false : false, // لأنك على http
       httpOnly: true,
-      sameSite: IS_DEVELOP ? "lax" : "strict", // 👈 ضروري جداً للسماح بتداول الكوكي بين منفذ 5173 و 5000
+      sameSite: IS_DEVELOP ? "lax" : "lax", // 👈 ضروري جداً للسماح بتداول الكوكي بين منفذ 5173 و 5000
     },
     store: MongoStore.create({
       client: mongoose.connection.getClient(),
