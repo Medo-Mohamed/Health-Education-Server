@@ -60,8 +60,8 @@ app.get("/", (req, res) => {
   res.status(200).json({ message: "Health Education Server is Running!" });
 });
 
-// 👈 تصحيح مسار 404
-app.all("*", (req, res) => {
+// ✅ أو هذه الصياغة البديلة المتوافقة
+app.use((req, res) => {
   res.status(404).json({ message: "404 Resource not found" });
 });
 
