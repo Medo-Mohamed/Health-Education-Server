@@ -1,6 +1,9 @@
 import express from "express";
 import env from "dotenv";
-env.config();
+
+if (process.env.NODE_ENV !== "production") {
+  env.config();
+}
 
 export const app = express();
 
@@ -27,7 +30,7 @@ import "./Config/passport-config";
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
-console.log(IS_DEVELOP)
+console.log(IS_DEVELOP);
 // 👈 استخدام URL أونلاين مباشرة لـ MongoStore لضمان عدم حدوث Crash قبل الاتصال
 const mongoUrl =
   process.env.ONLINE_DATABASE_URL || process.env.LOCAL_DATABASE_URL;
