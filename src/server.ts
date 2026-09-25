@@ -29,7 +29,7 @@ if (!IS_DEVELOP) {
   // console.error = silent; // (اختياري: لكتم الأخطاء أيضاً في غير تطوير)
 }
 
-import "./Config/Listen&Connection.ts";
+import "./Config/ListenConnection.ts";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import MongoStore from "connect-mongo";
