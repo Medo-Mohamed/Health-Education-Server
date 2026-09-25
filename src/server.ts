@@ -7,17 +7,8 @@ if (process.env.NODE_ENV !== "production") {
 
 export const app = express();
 
-const IS_DEVELOP = process.env.STATE === "develop"; // 👈 تصحيح الخطأ الإملائي
+const IS_DEVELOP = process.env.STATE === "develop";
 
-// if (!IS_DEVELOP) {
-//   const silent = () => {};
-//   console.log = silent;
-//   console.info = silent;
-//   console.warn = silent;
-//   console.debug = silent;
-// }
-
-import "./Config/ListenConnection";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import MongoStore from "connect-mongo";
@@ -26,14 +17,19 @@ import corsOptions from "./Config/corsOptions";
 import UsersRouter from "./routes/User/Users";
 import passport from "passport";
 import "./Config/passport-config";
+import "./Config/ListenConnection"; // استيراد بعد تعريف البيئة
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
-console.log(IS_DEVELOP);
-// 👈 استخدام URL أونلاين مباشرة لـ MongoStore لضمان عدم حدوث Crash قبل الاتصال
+
+console.log("Is Develop:", IS_DEVELOP);
+
 const mongoUrl =
   process.env.ONLINE_DATABASE_URL || process.env.LOCAL_DATABASE_URL;
+
+// ضبط الكوكي تلقائياً بناءً على البيئة
+const isProduction = process.env.NODE_ENV === "production";
 
 app.use(
   session({
@@ -42,9 +38,9 @@ app.use(
     resave: false,
     cookie: {
       maxAge: 1000 * 60 * 60,
-      secure: false, // يكون true في الإنتاج لـ HTTPS
+      secure: isProduction, // يكون true في الإنتاج عبر HTTPS
       httpOnly: true,
-      sameSite: IS_DEVELOP ? "lax" : "none", // 👈 "none" ضروري للـ Cross-Origin بين Vercel و Frontend
+      sameSite: isProduction ? "none" : "lax", // "none" متوافق دائماً مع secure: true في الإنتاج
     },
     store: MongoStore.create({
       mongoUrl: mongoUrl,
@@ -63,16 +59,15 @@ app.get("/", (req, res) => {
   res.status(200).json({ message: "Health Education Server is Running!" });
 });
 
-// ✅ أو هذه الصياغة البديلة المتوافقة
+// معالجة مسارات 404
 app.use((req, res) => {
   res.status(404).json({ message: "404 Resource not found" });
 });
 
-// 4. معالج أخطاء يظهر التفاصيل في Logs الخاصة بـ Vercel
+// معالج الأخطاء الرئيسي
 app.use((err: any, req: any, res: any, next: any) => {
   console.error("SERVER ERROR LOG:", err);
   res.status(500).json({ error: err.message || "Internal Server Error" });
 });
 
-// تصدير التطبيق لـ Vercel Serverless
 export default app;
