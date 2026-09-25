@@ -17,11 +17,14 @@ import corsOptions from "./Config/corsOptions";
 import UsersRouter from "./routes/User/Users";
 import passport from "passport";
 import "./Config/passport-config";
-import "./Config/ListenConnection"; // استيراد بعد تعريف البيئة
+// import "./Config/ListenConnection"; // استيراد بعد تعريف البيئة
+import dbConnect from "./Config/dbConnect";
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
+
+dbConnect();
 
 console.log("Is Develop:", IS_DEVELOP);
 
