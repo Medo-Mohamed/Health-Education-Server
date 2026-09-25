@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { getMyPlaces } from "../../Controlers/Places.ts";
-import placeManageRouters from "./place.manage.ts";
-import placeEmployeeRouters from "./place.employee.ts";
-import placeEventsRouter from "./place.events.ts";
-import placePlansRouter from "./place.plans.ts";
-import placeFilterRouter from "./place.filter.ts";
+import { getMyPlaces } from "../../Controlers/Places";
+import placeManageRouters from "./place.manage";
+import placeEmployeeRouters from "./place.employee";
+import placeEventsRouter from "./place.events";
+import placePlansRouter from "./place.plans";
+import placeFilterRouter from "./place.filter";
 
 const placesRouters = Router();
 

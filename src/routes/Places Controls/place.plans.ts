@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authorizePermission } from "../../middleware/validateCreatePlace.ts";
-import { PlacePermission } from "../../types/placeAccess.ts";
+import { authorizePermission } from "../../middleware/validateCreatePlace";
+import { PlacePermission } from "../../types/placeAccess";
 import {
   adminUpdatePendingPlan,
   checkPlacePlanAccess,
@@ -11,7 +11,7 @@ import {
   submitToPreReview,
   updateDraftPlan,
   updateApprovedPlan,
-} from "../../Controlers/Place.plans.ts";
+} from "../../Controlers/Place.plans";
 
 const placePlansRouter = Router();
 

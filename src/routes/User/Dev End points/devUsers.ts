@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { isDev } from "../../../middleware/isDevOrAdmin.ts";
-import { toggleAdmin } from "../../../Controlers/Users.ts";
+import { isDev } from "../../../middleware/isDevOrAdmin";
+import { toggleAdmin } from "../../../Controlers/Users";
 const router = Router();
 
 router.use(isDev);

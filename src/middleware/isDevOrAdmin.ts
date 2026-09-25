@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import type { IUser } from "../Models/User.ts";
+import type { IUser } from "../Models/User";
 export const isDev = (req: Request, res: Response, next: any) => {
   const user = req.user as IUser;
   if (user.role === "dev") {

@@ -5,9 +5,9 @@ import {
   createUsers,
   login,
   lostPassword,
-} from "../Controlers/Users.ts";
-import { isNotAuthenticated } from "../middleware/isAuth.ts";
-import asyncHandler from "../utils/asyncHandler.ts";
+} from "../Controlers/Users";
+import { isNotAuthenticated } from "../middleware/isAuth";
+import asyncHandler from "../utils/asyncHandler";
 
 const router = Router();
 router.use(isNotAuthenticated);

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import type { IUser } from "../Models/User.ts";
-import type { IPlace } from "../Models/Place.ts";
+import type { IUser } from "../Models/User";
+import type { IPlace } from "../Models/Place";
 declare global {
   namespace Express {
     interface Request {

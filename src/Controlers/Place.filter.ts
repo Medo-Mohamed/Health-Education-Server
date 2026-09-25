@@ -1,12 +1,12 @@
 import type { Response } from "express";
-import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace.ts";
-import { Place } from "../Models/Place.ts";
+import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace";
+import { Place } from "../Models/Place";
 import { Types } from "mongoose";
-import TopicsTables from "../Models/TopicsTables.ts";
-import { PlacePlan } from "../Models/PlacePlan.ts";
-import { PlaceEvent, type IPlaceEvent } from "../Models/PlaceEvent.ts";
-import { ROLE_WEIGHTS } from "./Places.ts";
-import type { PlaceRole } from "../types/placeAccess.ts";
+import TopicsTables from "../Models/TopicsTables";
+import { PlacePlan } from "../Models/PlacePlan";
+import { PlaceEvent, type IPlaceEvent } from "../Models/PlaceEvent";
+import { ROLE_WEIGHTS } from "./Places";
+import type { PlaceRole } from "../types/placeAccess";
 
 export const getPlacesAndSchedules = async (
   req: AuthenticatedPlaceRequest,

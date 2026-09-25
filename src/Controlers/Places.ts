@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
-import { Place } from "../Models/Place.ts";
-import { UserPlaceAccess } from "../Models/UserPlaceAccess.ts";
-import { PlaceRole } from "../types/placeAccess.ts";
+import { Place } from "../Models/Place";
+import { UserPlaceAccess } from "../Models/UserPlaceAccess";
+import { PlaceRole } from "../types/placeAccess";
 
 // 3. تعديل دور أو صلاحيات موظف في المكان
 export const ROLE_WEIGHTS: Record<PlaceRole | "dev", number> = {

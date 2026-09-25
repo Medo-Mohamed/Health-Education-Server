@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { authorizePermission } from "../../middleware/validateCreatePlace.ts";
-import { upload } from "../../Config/cloudinary.ts";
-import { PlacePermission } from "../../types/placeAccess.ts";
+import { authorizePermission } from "../../middleware/validateCreatePlace";
+import { upload } from "../../Config/cloudinary";
+import { PlacePermission } from "../../types/placeAccess";
 import {
   createPlace,
   getPlaceDetails,
   updatePlace,
   validateParentPlace,
-} from "../../Controlers/Place.manage.ts";
+} from "../../Controlers/Place.manage";
 
 const placeManageRouters = Router();
 

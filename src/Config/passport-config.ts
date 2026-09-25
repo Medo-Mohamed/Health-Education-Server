@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import User, { type IUser } from "../Models/User.ts";
+import User, { type IUser } from "../Models/User";
 
 passport.use(
   new LocalStrategy(

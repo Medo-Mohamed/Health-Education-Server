@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isAuthenticated } from "../middleware/isAuth.ts";
+import { isAuthenticated } from "../middleware/isAuth";
 import {
   followUser,
   getFollowingList,
@@ -8,15 +8,14 @@ import {
   refreshauth,
   unfollowUser,
   updateProfile,
-} from "../Controlers/Users.ts";
-import { upload } from "../middleware/upload.ts";
-import searchRoutes from "./User/SearchUsers/SearchUsers.ts";
-import { isDev } from "../middleware/isDevOrAdmin.ts";
-import DevRouters from "./User/Dev End points/devUsers.ts";
-import topicTabels from "./Topic Tabels/TT.ts";
-import Files from "./Files Controls/File.ts";
-import postsRoutes from "./Posts Controls/Posts.ts";
-import placesRouters from "./Places Controls/place.ts";
+} from "../Controlers/Users";
+import { upload } from "../middleware/upload";
+import searchRoutes from "./User/SearchUsers/SearchUsers";
+import DevRouters from "./User/Dev End points/devUsers";
+import topicTabels from "./Topic Tabels/TT";
+import Files from "./Files Controls/File";
+import postsRoutes from "./Posts Controls/Posts";
+import placesRouters from "./Places Controls/place";
 const router = Router();
 router.use(isAuthenticated);
 

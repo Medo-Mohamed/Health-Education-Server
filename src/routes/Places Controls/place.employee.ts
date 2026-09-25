@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authorizePermission } from "../../middleware/validateCreatePlace.ts";
-import { PlacePermission } from "../../types/placeAccess.ts";
+import { authorizePermission } from "../../middleware/validateCreatePlace";
+import { PlacePermission } from "../../types/placeAccess";
 import {
   addStaffToPlace,
   getEligibleUsersForPlace,
@@ -8,7 +8,7 @@ import {
   getStaffPermissions,
   removeStaffFromPlace,
   updateStaffAccess,
-} from "../../Controlers/Place.employee.ts";
+} from "../../Controlers/Place.employee";
 
 const placeEmployeeRouters = Router();
 

@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { isInCharge } from "../../middleware/isDevOrAdmin.ts";
-import { upload } from "../../Config/cloudinary.ts";
-import { createPost, getAllPosts } from "../../Controlers/Posts.ts";
-import "../../Config/deleteFilesAuto.ts";
+import { isInCharge } from "../../middleware/isDevOrAdmin";
+import { upload } from "../../Config/cloudinary";
+import { createPost, getAllPosts } from "../../Controlers/Posts";
+import "../../Config/deleteFilesAuto";
 const router = Router();
 
 router.route("/").get(getAllPosts);

@@ -1,13 +1,13 @@
 import type { Request, Response } from "express";
-import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace.ts";
-import { ROLE_WEIGHTS } from "./Places.ts";
-import { PlacePermission, type PlaceRole } from "../types/placeAccess.ts";
-import { Place, type IPlace } from "../Models/Place.ts";
-import { UserPlaceAccess } from "../Models/UserPlaceAccess.ts";
-import type { IUser } from "../Models/User.ts";
-import TopicsTables from "../Models/TopicsTables.ts";
+import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace";
+import { ROLE_WEIGHTS } from "./Places";
+import { PlacePermission, type PlaceRole } from "../types/placeAccess";
+import { Place, type IPlace } from "../Models/Place";
+import { UserPlaceAccess } from "../Models/UserPlaceAccess";
+import type { IUser } from "../Models/User";
+import TopicsTables from "../Models/TopicsTables";
 import { Types } from "mongoose";
-import { EventLocationType, PlaceEvent } from "../Models/PlaceEvent.ts";
+import { EventLocationType, PlaceEvent } from "../Models/PlaceEvent";
 
 export const checkCanCreatePlaceEvent = async (
   req: AuthenticatedPlaceRequest,

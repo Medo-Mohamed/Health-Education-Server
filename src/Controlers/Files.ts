@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import cloudinary from "../Config/cloudinary.ts";
-import FileArchive from "../Models/FileArchive.ts";
+import cloudinary from "../Config/cloudinary";
+import FileArchive from "../Models/FileArchive";
 import { Readable } from "node:stream";
 export const uploadFile = async (
   req: Request,

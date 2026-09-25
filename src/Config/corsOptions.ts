@@ -1,4 +1,4 @@
-import { allowedOririns } from "./allowedOrigins.ts";
+import { allowedOririns } from "./allowedOrigins";
 type NewType = (err: Error | null, allow?: boolean) => void;
 
 export default {

@@ -29,17 +29,16 @@ if (!IS_DEVELOP) {
   // console.error = silent; // (اختياري: لكتم الأخطاء أيضاً في غير تطوير)
 }
 
-import "./Config/ListenConnection.ts";
+import "./Config/ListenConnection";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import mongoose from "mongoose";
-import RootRouter from "./routes/Root.ts";
 import cors from "cors";
-import corsOptions from "./Config/corsOptions.ts";
-import UsersRouter from "./routes/User/Users.ts";
+import corsOptions from "./Config/corsOptions";
+import UsersRouter from "./routes/User/Users";
 import passport from "passport";
-import "./Config/passport-config.ts";
+import "./Config/passport-config";
 
 app.use(cors(corsOptions));
 app.use(cookieParser());

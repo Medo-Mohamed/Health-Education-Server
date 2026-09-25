@@ -1,19 +1,19 @@
 import type { Request, Response } from "express";
-import { Place } from "../Models/Place.ts";
+import { Place } from "../Models/Place";
 import mongoose from "mongoose";
 import {
   UserPlaceAccess,
   type ICustomPermission,
-} from "../Models/UserPlaceAccess.ts";
+} from "../Models/UserPlaceAccess";
 import { Types } from "mongoose";
-import User from "../Models/User.ts";
+import User from "../Models/User";
 import {
   DEFAULT_ROLE_PERMISSIONS,
   PlacePermission,
   PlaceRole,
-} from "../types/placeAccess.ts";
+} from "../types/placeAccess";
 import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace.ts";
-import { ROLE_WEIGHTS } from "./Places.ts";
+import { ROLE_WEIGHTS } from "./Places";
 
 async function getParentChainIds(
   startParentId: mongoose.Types.ObjectId,

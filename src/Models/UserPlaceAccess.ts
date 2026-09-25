@@ -4,7 +4,7 @@ import {
   PlaceRole,
   PlacePermission,
   DEFAULT_ROLE_PERMISSIONS,
-} from "../types/placeAccess.ts";
+} from "../types/placeAccess";
 
 // واجهة الصلاحية الاستثنائية المخصصة مع تاريخ الانتهاء
 export interface ICustomPermission {

@@ -1,9 +1,4 @@
 import mongoose, { Types, Document } from "mongoose";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 interface IPost extends Document {
   content?: string;
   mediaPath?: string | null;

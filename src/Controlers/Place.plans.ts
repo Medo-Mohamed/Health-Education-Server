@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
-import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace.ts";
-import TopicsTables from "../Models/TopicsTables.ts";
+import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace";
+import TopicsTables from "../Models/TopicsTables";
 import { Types } from "mongoose";
-import { PlacePlan, PlanStatus } from "../Models/PlacePlan.ts";
+import { PlacePlan, PlanStatus } from "../Models/PlacePlan";
 
 export const checkPlacePlanAccess = async (
   req: AuthenticatedPlaceRequest,

@@ -1,11 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
-import User, { type IUser } from "../Models/User.ts";
+import User, { type IUser } from "../Models/User";
 import passport from "passport";
-import { sendBrevoEmail } from "../Config/emailService.ts";
+import { sendBrevoEmail } from "../Config/emailService";
 import jwt from "jsonwebtoken";
-import cloudinary from "../Config/cloudinary.ts";
+import cloudinary from "../Config/cloudinary";
 import fs from "fs";
-import Follow from "../Models/Follow.ts";
+import Follow from "../Models/Follow";
 import mongoose, { Types } from "mongoose";
 export const createUsers = async (request: Request, response: Response) => {
   // console.log("Registering user with data:", request.body); // إضافة هذا السطر لتتبع البيانات المستلمة

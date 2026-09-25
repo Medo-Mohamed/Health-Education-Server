@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
-import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace.ts";
-import { Place } from "../Models/Place.ts";
-import cloudinary from "../Config/cloudinary.ts";
-import { UserPlaceAccess } from "../Models/UserPlaceAccess.ts";
-import { PlacePermission, PlaceRole } from "../types/placeAccess.ts";
+import type { AuthenticatedPlaceRequest } from "../middleware/validateCreatePlace";
+import { Place } from "../Models/Place";
+import cloudinary from "../Config/cloudinary";
+import { UserPlaceAccess } from "../Models/UserPlaceAccess";
+import { PlacePermission, PlaceRole } from "../types/placeAccess";
 import { Types } from "mongoose";
 
 export const createPlace = async (

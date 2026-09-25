@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import TopicsTables from "../Models/TopicsTables.ts";
+import TopicsTables from "../Models/TopicsTables";
 export const createTopicTable = async (req: Request, res: Response) => {
   try {
     const { description, title } = req.body;

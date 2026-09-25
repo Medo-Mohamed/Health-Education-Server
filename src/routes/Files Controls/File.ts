@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { isInCharge } from "../../middleware/isDevOrAdmin.ts";
-import { upload } from "../../Config/cloudinary.ts";
-import { deleteFile, getFiles, uploadFile } from "../../Controlers/Files.ts";
+import { isInCharge } from "../../middleware/isDevOrAdmin";
+import { upload } from "../../Config/cloudinary";
+import { deleteFile, getFiles, uploadFile } from "../../Controlers/Files";
 
 const router = Router();
 

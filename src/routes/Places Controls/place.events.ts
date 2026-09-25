@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { authorizePermission } from "../../middleware/validateCreatePlace.ts";
-import { PlacePermission } from "../../types/placeAccess.ts";
+import { authorizePermission } from "../../middleware/validateCreatePlace";
+import { PlacePermission } from "../../types/placeAccess";
 import {
   checkCanCreatePlaceEvent,
   createPlaceEvent,
   deleteEvent,
   updateEvent,
-} from "../../Controlers/Place.event.ts";
+} from "../../Controlers/Place.event";
 
 const placeEventsRouter = Router();
 

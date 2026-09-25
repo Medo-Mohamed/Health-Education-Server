@@ -1,17 +1,11 @@
 import express from "express";
 const router = express.Router();
 import sharp from "sharp";
-import path from "path";
-import fs from "fs";
-import Post from "../Models/Post.ts"; // تأكد من المسار الصحيح
-import type { IUser } from "../Models/User.ts";
+import Post from "../Models/Post"; // تأكد من المسار الصحيح
+import type { IUser } from "../Models/User";
 import type { Request, Response } from "express";
-import { fileURLToPath } from "url";
-import { uploadBufferToCloudinary } from "../Config/cloudinary.ts";
+import { uploadBufferToCloudinary } from "../Config/cloudinary";
 
-// هذا هو الجزء السحري الذي يعوض نقص __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 // إعداد التخزين المؤقت لـ Multer
 export const createPost = async (req: Request, res: Response) => {
   try {

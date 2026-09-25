@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isInCharge } from "../../middleware/isDevOrAdmin.ts";
+import { isInCharge } from "../../middleware/isDevOrAdmin";
 import {
   createTopicTable,
   deleteTopic,
@@ -7,7 +7,7 @@ import {
   getTablesSummary,
   updateTableRows,
   updateTitleAndDec,
-} from "../../Controlers/TopicsTables.ts";
+} from "../../Controlers/TopicsTables";
 
 const router = Router();
 

@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
-import { Place } from "../Models/Place.ts";
+import { Place } from "../Models/Place";
 import {
   UserPlaceAccess,
   type IUserPlaceAccess,
-} from "../Models/UserPlaceAccess.ts";
-import { PlacePermission } from "../types/placeAccess.ts";
+} from "../Models/UserPlaceAccess";
+import { PlacePermission } from "../types/placeAccess";
 import mongoose, { Types } from "mongoose";
 
 export interface AuthenticatedPlaceRequest extends Request {

@@ -1,6 +1,6 @@
-import { app } from "../server.ts";
+import { app } from "../server";
 import mongoose from "mongoose";
-import dbConnect from "./dbConnect.ts";
+import dbConnect from "./dbConnect";
 import env from "dotenv";
 env.config();
 const PORT = process.env.PORT || 3000;

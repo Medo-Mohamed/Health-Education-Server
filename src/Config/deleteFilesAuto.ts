@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { v2 as cloudinary } from "cloudinary";
-import Post from "../Models/Post.ts"; // تأكد من مسار موديل المنشورات
+import Post from "../Models/Post"; // تأكد من مسار موديل المنشورات
 
 /**
  * دالة مساعدة لاستخراج الـ public_id ونوع الميديا من رابط Cloudinary
