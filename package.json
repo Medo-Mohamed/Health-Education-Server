@@ -2,10 +2,10 @@
   "name": "health-education-server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node src/server.ts",
-    "dev": "nodemon src/server.js",
+    "start": "node dist/server.js",
+    "dev": "nodemon",
     "build": "tsc",
     "lint": "eslint . --ext .ts",
     "test": "jest"
