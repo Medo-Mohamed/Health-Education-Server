@@ -7,6 +7,9 @@ if (process.env.NODE_ENV !== "production") {
 
 export const app = express();
 
+// 1. تفعيل الثقة في البروكسي (ضروري لـ Vercel لتشغيل الكوكيز عبر HTTPS)
+app.set("trust proxy", 1);
+
 const IS_DEVELOP = process.env.STATE === "develop";
 
 import cookieParser from "cookie-parser";
@@ -17,10 +20,11 @@ import corsOptions from "./Config/corsOptions";
 import UsersRouter from "./routes/User/Users";
 import passport from "passport";
 import "./Config/passport-config";
-import "./Config/ListenConnection"; // استيراد بعد تعريف البيئة
-// import dbConnect from "./Config/dbConnect";
+import "./Config/ListenConnection";
 
+// 2. تطبيق خيارات CORS (يتكفل بالتعامل مع كافة الطلبات وطلبات Preflight تلقائياً)
 app.use(cors(corsOptions));
+
 app.use(cookieParser());
 app.use(express.json());
 
@@ -29,26 +33,29 @@ console.log("Is Develop:", IS_DEVELOP);
 const mongoUrl =
   process.env.ONLINE_DATABASE_URL || process.env.LOCAL_DATABASE_URL;
 
-// ضبط الكوكي تلقائياً بناءً على البيئة
 const isProduction = process.env.NODE_ENV === "production";
 
-app.use(
-  session({
-    secret: (process.env.SECRET_SESSION_KEY as string) || "fallback_secret",
-    saveUninitialized: false,
-    resave: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60,
-      secure: isProduction, // يكون true في الإنتاج عبر HTTPS
-      httpOnly: true,
-      sameSite: isProduction ? "none" : "lax", // "none" متوافق دائماً مع secure: true في الإنتاج
-    },
-    store: MongoStore.create({
-      mongoUrl: mongoUrl,
-      ttl: 14 * 24 * 60 * 60,
+// 3. ضبط الجلسات لحفظ الكوكي
+if (mongoUrl) {
+  app.use(
+    session({
+      secret: (process.env.SECRET_SESSION_KEY as string) || "fallback_secret",
+      saveUninitialized: false,
+      resave: false,
+      proxy: true,
+      cookie: {
+        maxAge: 1000 * 60 * 60 * 24, // يوم كامل
+        secure: isProduction,
+        httpOnly: true,
+        sameSite: isProduction ? "none" : "lax",
+      },
+      store: MongoStore.create({
+        mongoUrl: mongoUrl,
+        ttl: 14 * 24 * 60 * 60,
+      }),
     }),
-  }),
-);
+  );
+}
 
 app.use(passport.initialize());
 app.use(passport.session());
