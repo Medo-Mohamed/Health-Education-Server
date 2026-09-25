@@ -4,7 +4,7 @@ env.config();
 
 export const app = express();
 
-// const IS_DEVELOP = process.env.STATE === "develop"; // 👈 تصحيح الخطأ الإملائي
+const IS_DEVELOP = process.env.STATE === "develop"; // 👈 تصحيح الخطأ الإملائي
 
 // if (!IS_DEVELOP) {
 //   const silent = () => {};
