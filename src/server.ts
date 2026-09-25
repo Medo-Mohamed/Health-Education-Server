@@ -4,15 +4,15 @@ env.config();
 
 export const app = express();
 
-const IS_DEVELOP = process.env.STATE === "develop"; // 👈 تصحيح الخطأ الإملائي
+// const IS_DEVELOP = process.env.STATE === "develop"; // 👈 تصحيح الخطأ الإملائي
 
-if (!IS_DEVELOP) {
-  const silent = () => {};
-  console.log = silent;
-  console.info = silent;
-  console.warn = silent;
-  console.debug = silent;
-}
+// if (!IS_DEVELOP) {
+//   const silent = () => {};
+//   console.log = silent;
+//   console.info = silent;
+//   console.warn = silent;
+//   console.debug = silent;
+// }
 
 import "./Config/ListenConnection";
 import cookieParser from "cookie-parser";
