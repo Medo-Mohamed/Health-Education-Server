@@ -27,7 +27,7 @@ import "./Config/passport-config";
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
-
+console.log(IS_DEVELOP)
 // 👈 استخدام URL أونلاين مباشرة لـ MongoStore لضمان عدم حدوث Crash قبل الاتصال
 const mongoUrl =
   process.env.ONLINE_DATABASE_URL || process.env.LOCAL_DATABASE_URL;
@@ -39,7 +39,7 @@ app.use(
     resave: false,
     cookie: {
       maxAge: 1000 * 60 * 60,
-      secure: !IS_DEVELOP, // يكون true في الإنتاج لـ HTTPS
+      secure: false, // يكون true في الإنتاج لـ HTTPS
       httpOnly: true,
       sameSite: IS_DEVELOP ? "lax" : "none", // 👈 "none" ضروري للـ Cross-Origin بين Vercel و Frontend
     },
@@ -63,6 +63,12 @@ app.get("/", (req, res) => {
 // ✅ أو هذه الصياغة البديلة المتوافقة
 app.use((req, res) => {
   res.status(404).json({ message: "404 Resource not found" });
+});
+
+// 4. معالج أخطاء يظهر التفاصيل في Logs الخاصة بـ Vercel
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error("SERVER ERROR LOG:", err);
+  res.status(500).json({ error: err.message || "Internal Server Error" });
 });
 
 // تصدير التطبيق لـ Vercel Serverless
