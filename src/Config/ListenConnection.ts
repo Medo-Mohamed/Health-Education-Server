@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 import dbConnect from "./dbConnect";
 import env from "dotenv";
 
-env.config();
+if (process.env.NODE_ENV !== "production") {
+  env.config();
+}
 
 // 1. الاتصال المباشر بقاعدة البيانات
 dbConnect();
