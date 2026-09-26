@@ -1,12 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 import User, { type IUser } from "../Models/User";
 import passport from "passport";
-import { sendBrevoEmail } from "../Config/emailService";
 import jwt from "jsonwebtoken";
 import cloudinary from "../Config/cloudinary";
 import fs from "fs";
 import Follow from "../Models/Follow";
 import mongoose, { Types } from "mongoose";
+import "../Config/nodmailer";
+import sendEmail, { SendEmailOptions } from "../Config/nodmailer";
 export const createUsers = async (request: Request, response: Response) => {
   // console.log("Registering user with data:", request.body); // إضافة هذا السطر لتتبع البيانات المستلمة
   try {
@@ -130,25 +131,14 @@ export const lostPassword = async (
       });
     // توليد كود عشوائي
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const emailTemplate = (resetCode: string) => `
-  <div style="font-family: Arial, sans-serif; text-align: right; direction: rtl; border: 1px solid #e0e0e0; padding: 20px; border-radius: 10px;">
-    <h2 style="color: #2c3e50;">إعادة تعيين كلمة المرور</h2>
-    <p>لقد طلبت إعادة تعيين كلمة المرور لمنصة <strong>Health Education Platform</strong>.</p>
-    <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #3498db; border-radius: 5px;">
-      ${resetCode}
-    </div>
-    <p style="margin-top: 20px;">هذا الكود صالح لمدة 10 دقائق فقط. إذا لم تطلب هذا الكود، يرجى تجاهل هذا الإيميل.</p>
-    <hr style="border: 0; border-top: 1px solid #eee;" />
-    <p style="font-size: 12px; color: #7f8c8d;">جميع الحقوق محفوظة © منصة التثقيف الصحي 2026</p>
-  </div>
-`;
-    const isSent = await sendBrevoEmail(
-      user.email,
-      "كود التحقق لمنصة التثقيف الصحي",
-      emailTemplate(otpCode),
-    );
 
-    if (isSent) {
+    const options: SendEmailOptions = {
+      to: user.email,
+      subject: "رمز OTP لإعادة تعيين كلمة السر للحساب",
+      OTP: otpCode,
+    };
+    const { success, messageId } = await sendEmail(options);
+    if (success) {
       user.forgetPasswordInfo = {
         otpCode,
         validTime: new Date(Date.now() + 10 * 60 * 1000),
